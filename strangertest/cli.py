@@ -113,7 +113,7 @@ def cmd_survey(args: argparse.Namespace) -> int:
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="strangertest",
-        description="Authorized tester for cross-identity confused-deputy leaks in MCP servers.",
+        description="Tests MCP servers for cross-identity and delegated-authority (RFC 8693) authorization leaks.",
     )
     parser.add_argument("--version", action="version", version=f"stranger-test {__version__}")
     sub = parser.add_subparsers(dest="command")

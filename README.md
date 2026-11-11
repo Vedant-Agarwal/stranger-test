@@ -82,7 +82,19 @@ including the 2026-07-28 "modern" per-request envelope.
 Requires Python 3.9+. The core library and unit tests use the standard library
 only — no third-party dependencies.
 
-Unit tests, from the repository root:
+Install from PyPI:
+
+```
+pip install stranger-test
+```
+
+Then run the bundled demo (same as [Try it](#try-it) above):
+
+```
+python3 -m strangertest.demo
+```
+
+Unit tests, from a clone of the repository root:
 
 ```
 python3 -m unittest discover
