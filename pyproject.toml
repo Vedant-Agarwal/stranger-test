@@ -29,6 +29,9 @@ classifiers = [
     "Topic :: Software Development :: Testing",
 ]
 
+[project.urls]
+Repository = "https://github.com/Vedant-Agarwal/stranger-test"
+
 [project.scripts]
 strangertest = "strangertest.cli:main"
 
