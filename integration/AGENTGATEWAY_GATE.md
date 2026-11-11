@@ -117,6 +117,15 @@ jwt.rawToken.unredacted()`); `audiences` and `scopes` narrow the exchange.
   token for `agent-client` in `x-actor-token`. agentgateway strips that header
   before forwarding upstream (the run records `actor_header_reached_upstream`).
   The `act` claim therefore names the calling agent, not the gateway.
+- **Open question (not a finding): who vouches for the actor token?** Because
+  the actor token is supplied by the caller, agentgateway validates the user's
+  (subject) token but nothing in this config checks that the caller actually
+  *is* the agent named in the actor token. A caller holding a user's token and
+  any valid `agent-client` token can present itself as that agent. This is
+  most likely intended — the authorization server issuing the actor token is
+  expected to bind it to the real caller — so it is a question to put to the
+  agentgateway maintainers, **not** a bug we report. We have not run a
+  "lying caller" test against it for that reason.
 - **The gateway writes to its config file.** On startup agentgateway adds a
   generated `config.session.key` to the file it was given. The driver copies
   the config to a temp dir and runs it from there, so the repo file stays clean

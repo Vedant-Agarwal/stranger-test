@@ -1,0 +1,96 @@
+{
+  "probe": "xid10-delegation",
+  "mode": "delegation",
+  "trigger": "tool",
+  "gateway": "agentgateway",
+  "gateway_version": "1.7.0",
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "gateway_config_path": "integration/agentgateway/xid10-delegation.yaml",
+  "gateway_config_sha256": "432bd9050560b95efd91e1416e938f4158b13942e393d142ac195aae1a41fdc1",
+  "gateway_config": "# XID-10 gate: agentgateway as the deputy under test (RFC 8693 DELEGATION).\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:15790\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 3790\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: only users of the local AS, audience agentgateway-api.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:8790/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:18790/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:8790\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Delegation: the calling agent presents its own client-credentials\n              # token in x-actor-token. agentgateway cannot mint an actor token\n              # itself; the source must be a request location.\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "authorization_note": "inbound users validated by jwtAuth against the local AS JWKS; no gateway-side RBAC configured",
+  "actor_source": "caller-supplied x-actor-token (client_credentials token for 'agent-client'), forwarded as actor_token",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": true,
+    "audience_correct": true,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": false,
+  "failures": [],
+  "summary": "OK: delegation preserved subject and actor, used the correct audience and a narrowed scope, and minted a distinct token per principal.",
+  "a_first_eq_a_third_token": true,
+  "actor_header_reached_upstream": false,
+  "upstream_init_protocol_versions": [],
+  "upstream_protocol_version_headers": [
+    "2026-07-28"
+  ],
+  "client_transport": "HTTPTransport(modern=True), MCP 2026-07-28",
+  "upstream_methods_seen": [
+    [
+      "tools/list",
+      true
+    ],
+    [
+      "resources/list",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ]
+  ],
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": "agent-client",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:be57be66ff2e",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "bob",
+      "actor": "agent-client",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:193950b813f7",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "alice",
+      "actor": "agent-client",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:be57be66ff2e",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    }
+  ]
+}

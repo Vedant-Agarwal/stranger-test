@@ -1,0 +1,99 @@
+{
+  "probe": "xid10-delegation",
+  "mode": "broken_passthrough",
+  "trigger": "tool",
+  "gateway": "agentgateway",
+  "gateway_version": "1.7.0",
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "gateway_config_path": "integration/agentgateway/xid10-broken-passthrough.yaml",
+  "gateway_config_sha256": "c02aad4424bd6de79a5b7775ed7955de633bcf4432b0b0f70e8328b604f4a3fb",
+  "gateway_config": "# XID-10 DELIBERATELY BROKEN agentgateway fixture: token PASSTHROUGH.\n# No token exchange: the inbound user token is forwarded to the upstream as is.\n# Exists only to show the probe fails the same checks through this gateway.\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:15790\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 3790\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: only users of the local AS, audience agentgateway-api.\n    jwtAuth:\n      mode: strict\n      # Keep the validated user token in Authorization so it is forwarded upstream.\n      preserveToken: true\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:8790/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:18790/mcp\n",
+  "authorization_note": "inbound users validated by jwtAuth against the local AS JWKS; no gateway-side RBAC configured",
+  "actor_source": "caller-supplied x-actor-token (client_credentials token for 'agent-client'), forwarded as actor_token",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": false,
+    "audience_correct": false,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": true,
+  "failures": [
+    "actor_present",
+    "audience_correct"
+  ],
+  "summary": "LEAK: delegation integrity failed (actor_present, audience_correct) between 'A' and 'B' \u2014 delegation dropped or forged (on-behalf-of / token-exchange confused-deputy).",
+  "a_first_eq_a_third_token": true,
+  "actor_header_reached_upstream": true,
+  "upstream_init_protocol_versions": [],
+  "upstream_protocol_version_headers": [
+    "2026-07-28"
+  ],
+  "client_transport": "HTTPTransport(modern=True), MCP 2026-07-28",
+  "upstream_methods_seen": [
+    [
+      "tools/list",
+      true
+    ],
+    [
+      "resources/list",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ]
+  ],
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "agentgateway-api",
+      "scope": "read:notes",
+      "token": "sha256:ffd25f8d182b",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "bob",
+      "actor": null,
+      "audience": "agentgateway-api",
+      "scope": "read:notes",
+      "token": "sha256:35997fcb75aa",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "agentgateway-api",
+      "scope": "read:notes",
+      "token": "sha256:ffd25f8d182b",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    }
+  ]
+}

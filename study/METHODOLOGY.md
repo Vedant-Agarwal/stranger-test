@@ -122,6 +122,13 @@ database because the test set them up that way, and an operator who gives each
 tenant its own database is isolated by the database. It is a
 documentation/expectation issue to raise privately, not a broken control.
 
+The shortlist is **eight**, not the **six** candidates counted above, and both
+numbers are intended. The six are the servers whose *code* matched the leak
+shape in the static pass. The shortlist adds the servers that warranted a
+hands-on look for another reason — a documented multi-tenant claim, or a
+service that needs a third party to exercise — so eight were worked through in
+total.
+
 All eight shortlisted servers have now been worked through (2026-11-10):
 
 - **a graph-database memory server** — confirmed a documentation/expectation

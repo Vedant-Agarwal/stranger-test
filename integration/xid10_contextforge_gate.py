@@ -312,8 +312,9 @@ def main():
     print(f"=== MODE: {mode} ===")
     # Per-mode principals (label, sub, inbound issuer, email) and providers.
     if mode == "two_issuers":
-        # Same username "alice" from two different login providers (TrustGate's
-        # bug): the gateway must keep them distinct through the exchange.
+        # Same username "alice" from two different login providers (the
+        # cross-provider confusion class): the gateway must keep them distinct
+        # through the exchange.
         principals = [("A", "alice", "https://provx.test", "alice@provx.test"),
                       ("B", "alice", "https://provy.test", "alice@provy.test")]
         upsert_provider("provx", "https://provx.test", AS_BASE)
