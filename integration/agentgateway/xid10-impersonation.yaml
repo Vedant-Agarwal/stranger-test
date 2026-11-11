@@ -1,0 +1,49 @@
+# XID-10 gate: agentgateway as the deputy under test (RFC 8693 IMPERSONATION).
+#
+# Everything is loopback-only. agentgateway binds all interfaces by default, so
+# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.
+#   client --(user JWT)--> agentgateway :3790
+#   agentgateway --(token exchange)--> local_as :8790/token
+#   agentgateway --(exchanged token)--> recording upstream :18790/mcp
+config:
+  adminAddr: 127.0.0.1:15790
+  statsAddr: "off"
+  readinessAddr: "off"
+gateways:
+  xid10:
+    port: 3790
+    bindAddress: 127.0.0.1
+routes:
+- name: xid10-mcp
+  gateways: xid10
+  policies:
+    # Inbound: only users of the local AS, audience agentgateway-api.
+    jwtAuth:
+      mode: strict
+      providers:
+      - issuer: https://local-as.test
+        audiences: [agentgateway-api]
+        jwks:
+          url: http://127.0.0.1:8790/jwks
+  backends:
+  - mcp:
+      statefulMode: stateful
+      targets:
+      - name: upstream
+        mcp:
+          host: http://127.0.0.1:18790/mcp
+        policies:
+          backendAuth:
+            oauthTokenExchange:
+              host: 127.0.0.1:8790
+              path: /token
+              # The validated inbound user JWT is the subject token (jwtAuth
+              # strips the Authorization header unless preserveToken is set).
+              subjectToken:
+                source:
+                  expression: jwt.rawToken.unredacted()
+                tokenType: urn:ietf:params:oauth:token-type:jwt
+              # Impersonation: no actorToken, so the exchange carries no actor
+              # and the exchanged token has no `act` claim.
+              audiences: [https://upstream.test/mcp]
+              scopes: [read:notes]

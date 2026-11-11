@@ -1,0 +1,38 @@
+# XID-10 DELIBERATELY BROKEN agentgateway fixture: token PASSTHROUGH.
+# No token exchange: the inbound user token is forwarded to the upstream as is.
+# Exists only to show the probe fails the same checks through this gateway.
+#
+# Everything is loopback-only. agentgateway binds all interfaces by default, so
+# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.
+#   client --(user JWT + x-actor-token)--> agentgateway :3790
+#   agentgateway --(token exchange)--> local_as :8790/token
+#   agentgateway --(exchanged token)--> recording upstream :18790/mcp
+config:
+  adminAddr: 127.0.0.1:15790
+  statsAddr: "off"
+  readinessAddr: "off"
+gateways:
+  xid10:
+    port: 3790
+    bindAddress: 127.0.0.1
+routes:
+- name: xid10-mcp
+  gateways: xid10
+  policies:
+    # Inbound: only users of the local AS, audience agentgateway-api.
+    jwtAuth:
+      mode: strict
+      # Keep the validated user token in Authorization so it is forwarded upstream.
+      preserveToken: true
+      providers:
+      - issuer: https://local-as.test
+        audiences: [agentgateway-api]
+        jwks:
+          url: http://127.0.0.1:8790/jwks
+  backends:
+  - mcp:
+      statefulMode: stateful
+      targets:
+      - name: upstream
+        mcp:
+          host: http://127.0.0.1:18790/mcp

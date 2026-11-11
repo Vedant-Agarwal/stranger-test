@@ -1,0 +1,57 @@
+{
+  "probe": "xid10-delegation",
+  "mode": "impersonation",
+  "trigger": "tool",
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "authorization_note": "external users granted tools.execute via a team-scoped developer role (not admin)",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": false,
+    "audience_correct": true,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": true,
+  "failures": [
+    "actor_present"
+  ],
+  "summary": "LEAK: delegation integrity failed (actor_present) between 'A' and 'B' \u2014 impersonation: the exchanged token carries no acting-agent ('act') claim, so the agent acting for the user is invisible.",
+  "a_first_eq_a_third_token": true,
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:6055eabf5815",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "bob",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:5ff359911e49",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:6055eabf5815",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    }
+  ]
+}
