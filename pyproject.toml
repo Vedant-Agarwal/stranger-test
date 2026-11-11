@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stranger-test"
 dynamic = ["version"]
-description = "Authorized tester for cross-identity confused-deputy leaks in MCP servers."
+description = "Tests MCP servers for cross-identity and delegated-authority (RFC 8693) authorization leaks."
 readme = "README.md"
 requires-python = ">=3.9"
 license = "Apache-2.0"
