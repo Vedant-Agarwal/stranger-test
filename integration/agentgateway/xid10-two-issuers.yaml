@@ -1,0 +1,62 @@
+# XID-10 gate: agentgateway as the deputy under test (RFC 8693 DELEGATION),
+# two login providers (provX, provY) that both have a user named alice.
+#
+# Everything is loopback-only. agentgateway binds all interfaces by default, so
+# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.
+#   client --(user JWT + x-actor-token)--> agentgateway :3790
+#   agentgateway --(token exchange)--> local_as :8790/token
+#   agentgateway --(exchanged token)--> recording upstream :18790/mcp
+config:
+  adminAddr: 127.0.0.1:15790
+  statsAddr: "off"
+  readinessAddr: "off"
+gateways:
+  xid10:
+    port: 3790
+    bindAddress: 127.0.0.1
+routes:
+- name: xid10-mcp
+  gateways: xid10
+  policies:
+    # Inbound: two trusted providers. Both are served by the local AS (same
+    # JWKS), but they are different issuers: alice@provX and alice@provY are
+    # different principals and must stay distinct through the exchange.
+    jwtAuth:
+      mode: strict
+      providers:
+      - issuer: https://provx.test
+        audiences: [agentgateway-api]
+        jwks:
+          url: http://127.0.0.1:8790/jwks
+      - issuer: https://provy.test
+        audiences: [agentgateway-api]
+        jwks:
+          url: http://127.0.0.1:8790/jwks
+  backends:
+  - mcp:
+      statefulMode: stateful
+      targets:
+      - name: upstream
+        mcp:
+          host: http://127.0.0.1:18790/mcp
+        policies:
+          backendAuth:
+            oauthTokenExchange:
+              host: 127.0.0.1:8790
+              path: /token
+              # The validated inbound user JWT is the subject token (jwtAuth
+              # strips the Authorization header unless preserveToken is set).
+              subjectToken:
+                source:
+                  expression: jwt.rawToken.unredacted()
+                tokenType: urn:ietf:params:oauth:token-type:jwt
+              # Delegation: the calling agent presents its own client-credentials
+              # token in x-actor-token. agentgateway cannot mint an actor token
+              # itself; the source must be a request location.
+              actorToken:
+                source:
+                  header:
+                    name: x-actor-token
+                tokenType: urn:ietf:params:oauth:token-type:jwt
+              audiences: [https://upstream.test/mcp]
+              scopes: [read:notes]

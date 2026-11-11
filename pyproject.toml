@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stranger-test"
+dynamic = ["version"]
+description = "Authorized tester for cross-identity confused-deputy leaks in MCP servers."
+readme = "README.md"
+requires-python = ">=3.9"
+authors = [{ name = "Vedant Agarwal" }]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "security",
+    "authorization",
+    "confused-deputy",
+]
+dependencies = []
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Topic :: Security",
+    "Topic :: Software Development :: Testing",
+]
+# license: intentionally unset — a permissive license is to be chosen before
+# any public release.
+
+[project.scripts]
+strangertest = "strangertest.cli:main"
+
+[tool.setuptools]
+packages = ["strangertest"]
+
+[tool.setuptools.dynamic]
+version = { attr = "strangertest.__version__" }

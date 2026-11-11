@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+
+# Tooling / OS
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.DS_Store
+
+# Study: cloned third-party source and per-project notes stay local.
+# Named findings are for private, responsible disclosure only.
+corpus/
+study/private/
+
+# Secrets / keys / local run state — never commit (gates write these locally).
+*.pem
+*.key
+.env
+.env.secrets
+*.db
+# Gate run artifacts (written per run by the ContextForge gate).
+integration/runs/

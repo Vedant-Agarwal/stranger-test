@@ -1,0 +1,55 @@
+{
+  "probe": "xid10-delegation",
+  "mode": "delegation",
+  "trigger": "tool",
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "authorization_note": "external users granted tools.execute via a team-scoped developer role (not admin)",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": true,
+    "audience_correct": true,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": false,
+  "failures": [],
+  "summary": "OK: delegation preserved subject and actor, used the correct audience and a narrowed scope, and minted a distinct token per principal.",
+  "a_first_eq_a_third_token": true,
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": "forge",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:7c07401d5d37",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "bob",
+      "actor": "forge",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:fcfff6da4470",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "alice",
+      "actor": "forge",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:7c07401d5d37",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    }
+  ]
+}
