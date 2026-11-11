@@ -1,5 +1,5 @@
 [build-system]
-requires = ["setuptools>=61.0"]
+requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -8,6 +8,8 @@ dynamic = ["version"]
 description = "Authorized tester for cross-identity confused-deputy leaks in MCP servers."
 readme = "README.md"
 requires-python = ">=3.9"
+license = "Apache-2.0"
+license-files = ["LICENSE"]
 authors = [{ name = "Vedant Agarwal" }]
 keywords = [
     "mcp",
@@ -26,8 +28,6 @@ classifiers = [
     "Topic :: Security",
     "Topic :: Software Development :: Testing",
 ]
-# license: intentionally unset — a permissive license is to be chosen before
-# any public release.
 
 [project.scripts]
 strangertest = "strangertest.cli:main"
