@@ -54,9 +54,20 @@ def _fixture_rows():
     return rows
 
 
+def _run_files(pattern):
+    """Live runs under runs/ if any match, else the committed sample-runs/
+    fallback — so a fresh clone with no local runs still regenerates the same
+    tables from the redacted samples. Per-pattern: a gateway with live runs
+    uses them even if another gateway only has samples."""
+    live = sorted(glob.glob(os.path.join(_HERE, "runs", pattern)))
+    if live:
+        return live
+    return sorted(glob.glob(os.path.join(_HERE, "sample-runs", pattern)))
+
+
 def _cf_rows():
     latest = {}
-    for f in sorted(glob.glob(os.path.join(_HERE, "runs", "contextforge-*.json"))):
+    for f in _run_files("contextforge-*.json"):
         try:
             d = json.load(open(f))
         except Exception:
@@ -74,7 +85,7 @@ AGW_FIXTURES = {"broken_passthrough":
 
 def _agw_runs():
     latest = {}
-    for f in sorted(glob.glob(os.path.join(_HERE, "runs", "agentgateway-*.json"))):
+    for f in _run_files("agentgateway-*.json"):
         try:
             d = json.load(open(f))
         except Exception:
@@ -158,9 +169,7 @@ def main():
             L.append("")
         cache = [d.get("a_first_eq_a_third_token") for d in agw_rows]
         L.append(f"- agentgateway caches the exchange per user (A's 1st and 3rd "
-                 f"calls carried the same token): `{all(cache)}` in every row. "
-                 "Its cache keys on the raw subject token (plus token type, "
-                 "actor and extra params), not the `sub` claim.")
+                 f"calls carried the same token): `{all(cache)}` in every row.")
         leaked = any(d.get("actor_header_reached_upstream") for d in agw_rows)
         L.append(f"- The caller's `x-actor-token` header reached the upstream: "
                  f"`{leaked}` (agentgateway strips it before forwarding).")

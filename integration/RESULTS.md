@@ -34,7 +34,7 @@ Detection through agentgateway itself (deliberately broken config, same gate; mu
 |---|---|---|---|
 | `broken_passthrough` | no exchange; `preserveToken` forwards the inbound user token | FLAGGED | actor_present, audience_correct |
 
-- agentgateway caches the exchange per user (A's 1st and 3rd calls carried the same token): `True` in every row. Its cache keys on the raw subject token (plus token type, actor and extra params), not the `sub` claim.
+- agentgateway caches the exchange per user (A's 1st and 3rd calls carried the same token): `True` in every row.
 - The caller's `x-actor-token` header reached the upstream: `False` (agentgateway strips it before forwarding).
 - With the delegation config and no `x-actor-token`, agentgateway answered HTTP 400 and made no upstream call: it fails closed rather than falling back to impersonation (observed by the gate's `delegation_missing_actor` mode; no run file, since the probe cannot start).
 - No vulnerability was *found* in agentgateway 1.7.0 on these scenarios. The same checks did fail on the broken config above and on the thin-deputy fixtures below.

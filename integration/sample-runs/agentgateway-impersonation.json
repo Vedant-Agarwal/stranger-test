@@ -1,0 +1,98 @@
+{
+  "probe": "xid10-delegation",
+  "mode": "impersonation",
+  "trigger": "tool",
+  "gateway": "agentgateway",
+  "gateway_version": "1.7.0",
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "gateway_config_path": "integration/agentgateway/xid10-impersonation.yaml",
+  "gateway_config_sha256": "671cd786495fed236d4b8113e653f850d348270203a301d49afb7a1b05bd5693",
+  "gateway_config": "# XID-10 gate: agentgateway as the deputy under test (RFC 8693 IMPERSONATION).\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:15790\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 3790\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: only users of the local AS, audience agentgateway-api.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:8790/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:18790/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:8790\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Impersonation: no actorToken, so the exchange carries no actor\n              # and the exchanged token has no `act` claim.\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "authorization_note": "inbound users validated by jwtAuth against the local AS JWKS; no gateway-side RBAC configured",
+  "actor_source": "none (no actor token sent or configured)",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": false,
+    "audience_correct": true,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": true,
+  "failures": [
+    "actor_present"
+  ],
+  "summary": "LEAK: delegation integrity failed (actor_present) between 'A' and 'B' \u2014 impersonation: the exchanged token carries no acting-agent ('act') claim, so the agent acting for the user is invisible.",
+  "a_first_eq_a_third_token": true,
+  "actor_header_reached_upstream": false,
+  "upstream_init_protocol_versions": [],
+  "upstream_protocol_version_headers": [
+    "2026-07-28"
+  ],
+  "client_transport": "HTTPTransport(modern=True), MCP 2026-07-28",
+  "upstream_methods_seen": [
+    [
+      "tools/list",
+      true
+    ],
+    [
+      "resources/list",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ],
+    [
+      "tools/call",
+      true
+    ]
+  ],
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:6525c989e014",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "bob",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:f0cfb2224ec8",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    },
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:6525c989e014",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call"
+    }
+  ]
+}

@@ -72,7 +72,7 @@ Expected (ContextForge 1.1.1):
   no cross-identity reuse). ContextForge also enforces one-email-to-one-provider
   binding, refusing a second provider's claim on the same email unless
   `SSO_ALLOW_PROVIDER_LINKING` — a built-in guard against the cross-provider
-  confusion (TrustGate) class.
+  confusion class (two users with the same username from different issuers).
 
 Each run writes `integration/runs/contextforge-<mode>-<ts>.json` with the
 checks, the three recorded upstream calls, and the gateway version.
