@@ -13,4 +13,4 @@ from .probe import Identity, ProbeError, ProbePlan, ProbeReport, new_marker, run
 from .subscribe import SubscriptionReport, run_subscription_probe  # noqa: F401
 from .transports import HTTPTransport, StdioTransport  # noqa: F401
 
-__version__ = "0.0.2"
+__version__ = "0.1.0"

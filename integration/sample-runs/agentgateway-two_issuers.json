@@ -14,8 +14,8 @@
     "crypto_fips": false
   },
   "gateway_config_path": "integration/agentgateway/xid10-two-issuers.yaml",
-  "gateway_config_sha256": "8c755f03a13fd211eb8e533c387d64d8688726c2808222b0b7de353767892311",
-  "gateway_config": "# XID-10 gate: agentgateway as the deputy under test (RFC 8693 DELEGATION),\n# two login providers (provX, provY) that both have a user named alice.\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:15790\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 3790\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: two trusted providers. Both are served by the local AS (same\n    # JWKS), but they are different issuers: alice@provX and alice@provY are\n    # different principals and must stay distinct through the exchange.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://provx.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:8790/jwks\n      - issuer: https://provy.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:8790/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:18790/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:8790\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Delegation: the calling agent presents its own client-credentials\n              # token in x-actor-token. agentgateway cannot mint an actor token\n              # itself; the source must be a request location.\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "gateway_config_sha256": "40252171b5be179fc9d03a5500ed3d960bd14742254f4ccb113c9d63b4235df9",
+  "gateway_config": "# XID-10 gate: agentgateway as the deputy under test (RFC 8693 DELEGATION),\n# two login providers (provX, provY) that both have a user named alice.\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:15790\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 3790\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: two trusted providers, each with its OWN signing key (the local\n    # AS serves one JWKS per provider at /jwks/<name>). They are different\n    # issuers: alice@provX and alice@provY are\n    # different principals and must stay distinct through the exchange.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://provx.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:8790/jwks/provx\n      - issuer: https://provy.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:8790/jwks/provy\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:18790/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:8790\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Delegation: the calling agent presents its own client-credentials\n              # token in x-actor-token. agentgateway cannot mint an actor token\n              # itself; the source must be a request location.\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
   "authorization_note": "inbound users validated by jwtAuth against the local AS JWKS; no gateway-side RBAC configured",
   "actor_source": "caller-supplied x-actor-token (client_credentials token for 'agent-client'), forwarded as actor_token",
   "checks": {
@@ -64,7 +64,7 @@
       "actor": "agent-client",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:06c9543b176f",
+      "token": "sha256:ca1a8d5f57f4",
       "issuer": "https://provx.test",
       "parsed": true,
       "parse_error": null,
@@ -75,7 +75,7 @@
       "actor": "agent-client",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:713621ea4c33",
+      "token": "sha256:bc8c8f23258c",
       "issuer": "https://provy.test",
       "parsed": true,
       "parse_error": null,
@@ -86,11 +86,18 @@
       "actor": "agent-client",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:06c9543b176f",
+      "token": "sha256:ca1a8d5f57f4",
       "issuer": "https://provx.test",
       "parsed": true,
       "parse_error": null,
       "method": "tools/call"
     }
-  ]
+  ],
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4190",
+    "agw_url": "http://127.0.0.1:4130/mcp",
+    "agw_admin_port": 4131,
+    "upstream_port": 4180
+  },
+  "gateway_run_config_sha256": "9f6c5cba0da93df835a832e791817ba8e726d669d57dacb90693d9187eb6fa07"
 }

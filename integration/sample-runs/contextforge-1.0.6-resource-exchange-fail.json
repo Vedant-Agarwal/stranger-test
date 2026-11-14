@@ -1,0 +1,276 @@
+{
+  "probe": "xid10-resource-read-exchange-failure",
+  "gateway": "ContextForge",
+  "gateway_version": "1.0.6",
+  "image": "ghcr.io/ibm/mcp-context-forge:v1.0.6",
+  "container": "cf106-xid10",
+  "method": "fresh oauth token-exchange gateway; toggleable AS returns a signed token in ok mode and HTTP 400 invalid_grant in fail mode; recorder echoes the client's requested protocolVersion so the MCP SDK never aborts initialize",
+  "oauth_config": {
+    "grant_type": "token-exchange",
+    "token_url": "http://host.docker.internal:8793/token-ex",
+    "target_audience": "https://upstream.test/mcp",
+    "subject_token_source": "inbound_user_jwt",
+    "client_id": "forge",
+    "client_secret": "REDACTED",
+    "scopes": [
+      "read:notes"
+    ],
+    "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+    "subject_token_type": "urn:ietf:params:oauth:token-type:jwt"
+  },
+  "upstream_url": "http://host.docker.internal:8796/mcp",
+  "inbound_caller": "admin JWT (3-part; CF looks_like_jwt guard passes, real exchange attempted)",
+  "trigger": "MCP resources/read via virtual server POST /servers/{id}/mcp (the federated read path CF directs clients to)",
+  "control_read_reached_upstream": true,
+  "control_read_auth_present": true,
+  "test_read_reached_upstream": true,
+  "test_read_auth_present": false,
+  "as_attempts": [
+    {
+      "mode": "ok",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "ts": 1794381449.107678
+    },
+    {
+      "mode": "ok",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "ts": 1794381449.536513
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "ts": 1794381449.847394
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "ts": 1794381450.856168
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "ts": 1794381452.868644
+    }
+  ],
+  "upstream_calls": [
+    {
+      "method": "initialize",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:de6b86478b27",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.1646569
+    },
+    {
+      "method": "notifications/initialized",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:de6b86478b27",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.167222
+    },
+    {
+      "method": "tools/list",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:de6b86478b27",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.1688871
+    },
+    {
+      "method": "resources/list",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:de6b86478b27",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.1713989
+    },
+    {
+      "method": "resources/templates/list",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:de6b86478b27",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.1746151
+    },
+    {
+      "method": "initialize",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5e1d4e6eed72",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.584956
+    },
+    {
+      "method": "notifications/initialized",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5e1d4e6eed72",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.58706
+    },
+    {
+      "method": "resources/read",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5e1d4e6eed72",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794381449.5887702
+    },
+    {
+      "method": "initialize",
+      "auth_header_present": false,
+      "auth_scheme": null,
+      "token_fp": null,
+      "header_names": [
+        "Accept-Encoding",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type"
+      ],
+      "as_mode_at_time": "fail",
+      "ts": 1794381452.884492
+    },
+    {
+      "method": "notifications/initialized",
+      "auth_header_present": false,
+      "auth_scheme": null,
+      "token_fp": null,
+      "header_names": [
+        "Accept-Encoding",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "fail",
+      "ts": 1794381452.888557
+    },
+    {
+      "method": "resources/read",
+      "auth_header_present": false,
+      "auth_scheme": null,
+      "token_fp": null,
+      "header_names": [
+        "Accept-Encoding",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "fail",
+      "ts": 1794381452.892046
+    }
+  ],
+  "phase_markers": [
+    {
+      "_marker": "=== CONTROL READ (AS=ok) ===",
+      "ts": 1794381449.281278
+    },
+    {
+      "_marker": "=== TEST READ (AS=fail) ===",
+      "ts": 1794381449.5924459
+    },
+    {
+      "_marker": "=== CACHED READ (AS=fail) ===",
+      "ts": 1794381452.896626
+    }
+  ],
+  "verdict": "BUG REPRODUCED: resources/read forwarded upstream with NO Authorization header when the token exchange failed",
+  "note": "Canonical sample. Control (exchange ok) vs test (exchange fail) in one run. Tokens redacted to sha256 fingerprints."
+}

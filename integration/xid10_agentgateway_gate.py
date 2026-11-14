@@ -52,10 +52,14 @@ for p in (_REPO, _HERE):
 try:
     import jwt  # noqa: F401
 except Exception as exc:  # pragma: no cover
-    print(f"SKIP: needs pyjwt[crypto] ({exc})")
-    sys.exit(0)
+    print(f"ERROR: cannot run the XID-10 agentgateway gate: needs pyjwt[crypto] ({exc})",
+          file=sys.stderr)
+    sys.exit(2)
 
-from strangertest.delegate import MockUpstream, run_delegation_probe
+from strangertest.delegate import (MockUpstream, grade_issuer_email_crossprovider,
+                                   observe_one_call, run_delegation_probe,
+                                   run_issuer_unregistered_probe, run_scope_narrowing_probe,
+                                   gate_run_problems, request_nonce)
 from strangertest.mcp_client import MCPClient
 from strangertest.probe import Identity, ProbeError
 from strangertest.transports import HTTPTransport
@@ -78,7 +82,48 @@ CONFIGS = {
     "broken_passthrough": "xid10-broken-passthrough.yaml",
     # the delegation config, but the caller sends no x-actor-token.
     "delegation_missing_actor": "xid10-delegation.yaml",
+    # New checks (scope narrowing, issuer binding):
+    "scope_narrowing": "xid10-delegation.yaml",          # scopes: [read:notes]
+    "scope_narrowing-noscopes": "xid10-scope-none.yaml",  # no scopes
+    "issuer_unregistered": "xid10-two-issuers.yaml",
+    "issuer_email_crossprovider": "xid10-two-issuers.yaml",
 }
+NEW_MODES = ("scope_narrowing", "issuer_unregistered", "issuer_email_crossprovider")
+AGW_ADMIN_PORT = int(os.environ.get("AGW_ADMIN_PORT", "15790"))
+FIXTURE_PORT = int(os.environ.get("FIXTURE_PORT", "0"))
+FORBIDDEN_PORTS = {8790, 4444}
+# The ports the repo configs name; substituted at run time (config-only).
+_CFG_AS, _CFG_GW, _CFG_ADMIN, _CFG_UP = "127.0.0.1:8790", 3790, "127.0.0.1:15790", "127.0.0.1:18790"
+
+
+def _port_ok(port):
+    if port in FORBIDDEN_PORTS:
+        raise SystemExit(f"ERROR: refusing to use reserved port {port}")
+    return port
+
+
+def require_endpoints():
+    """Refuse to run unless the AS and gateway URLs were set explicitly and
+    none of the ports is reserved. Returns the endpoints for the saved run."""
+    from urllib.parse import urlparse
+    for var in ("AS_BASE", "AGW_URL"):
+        if not os.environ.get(var):
+            raise SystemExit(f"ERROR: refusing to start: set {var} explicitly")
+    for port in (urlparse(AS_BASE).port, urlparse(AGW_URL).port, AGW_ADMIN_PORT, UPSTREAM_PORT):
+        _port_ok(port)
+    return {"as_base": AS_BASE, "agw_url": AGW_URL, "agw_admin_port": AGW_ADMIN_PORT,
+            "upstream_port": UPSTREAM_PORT}
+
+
+def substitute_ports(text):
+    """Rewrite the repo config's fixed ports to this run's ports (config only)."""
+    from urllib.parse import urlparse
+    as_hostport = urlparse(AS_BASE).netloc
+    gw_port = urlparse(AGW_URL).port
+    out = text.replace(_CFG_AS, as_hostport).replace(_CFG_ADMIN, f"127.0.0.1:{AGW_ADMIN_PORT}")
+    out = out.replace(_CFG_UP, f"127.0.0.1:{UPSTREAM_PORT}")
+    out = re.sub(r"(\n\s+port:\s*)%d\b" % _CFG_GW, lambda m: m.group(1) + str(gw_port), out)
+    return out
 
 _JWT_RE = re.compile(r"eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]*")
 
@@ -112,9 +157,11 @@ class Upstream(MockUpstream):
         self.init_versions = []          # protocolVersion the gateway sent upstream
         self.methods_seen = []           # every method, in order (with auth y/n)
         self.upstream_proto_headers = set()  # MCP-Protocol-Version header values seen
+        self.emails = {}                 # token fingerprint -> email claim (side record)
         outer = self
         TOOL = {"name": "read_note", "description": "Read the caller's note.",
-                "inputSchema": {"type": "object", "properties": {}, "additionalProperties": False}}
+                "inputSchema": {"type": "object", "properties": {"nonce": {"type": "string"}},
+                                "additionalProperties": False}}
 
         class H(BaseHTTPRequestHandler):
             def log_message(self, *a):
@@ -172,7 +219,7 @@ class Upstream(MockUpstream):
                     return
                 if m in ("resources/read", "tools/call"):
                     outer.actor_header_seen.append(self.headers.get("x-actor-token") is not None)
-                    outer._rec(m, bearer)
+                    outer._rec(m, bearer, msg.get("params"))
                     if m == "resources/read":
                         uri = (msg.get("params") or {}).get("uri", "note://caller")
                         result = {"contents": [{"uri": uri, "mimeType": "text/plain", "text": "ok"}]}
@@ -183,24 +230,28 @@ class Upstream(MockUpstream):
                 self._send({"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": "no"}})
 
         # Loopback only, on the fixed port the agentgateway config names.
-        self._srv4 = _HTTP4(("127.0.0.1", port), H)
+        self._srv4 = _HTTP4(("127.0.0.1", _port_ok(port)), H)
         self._port = port
 
-    def _rec(self, method, bearer):
+    def _rec(self, method, bearer, params=None):
+        nonce = request_nonce(params)
         try:
             c = jwt.decode(bearer, self._key, algorithms=["RS256"], issuer=self._iss,
                            options={"verify_aud": False, "verify_exp": True, "require": ["exp", "iss"]})
         except Exception as e:
-            self.receive(token=bearer, parsed=False, parse_error=str(e), method=method)
+            self.receive(token=bearer, parsed=False, parse_error=str(e), method=method,
+                         nonce=nonce)
             return
         act = c.get("act")
+        self.emails[_fp(bearer)] = c.get("email")
         # Identity is the ORIGINAL login provider (orig_iss), not the exchange
         # AS — so a gateway that conflates same-named users from two providers
         # is caught. Fall back to iss for non-exchange tokens.
         self.receive(subject=c.get("sub"),
                      actor=act.get("sub") if isinstance(act, dict) else None,
                      audience=c.get("aud"), scope=c.get("scope"), token=bearer,
-                     issuer=c.get("orig_iss") or c.get("iss"), parsed=True, method=method)
+                     issuer=c.get("orig_iss") or c.get("iss"), parsed=True, method=method,
+                     nonce=nonce)
 
     def start(self):
         threading.Thread(target=self._srv4.serve_forever, daemon=True).start()
@@ -254,7 +305,17 @@ class Gateway:
         import shutil, tempfile
         self._tmpdir = tempfile.mkdtemp(prefix="xid10-agw-")
         run_cfg = os.path.join(self._tmpdir, os.path.basename(self.config_path))
-        shutil.copyfile(self.config_path, run_cfg)
+        with open(self.config_path) as f:
+            self.run_config_text = substitute_ports(f.read())
+        with open(run_cfg, "w") as f:
+            f.write(self.run_config_text)
+        for line in self.run_config_text.splitlines():
+            if line.strip().startswith("#"):
+                continue
+            for bad in FORBIDDEN_PORTS:
+                if re.search(r"(?<![0-9])%d(?![0-9])" % bad, line):
+                    raise SystemExit(f"ERROR: refusing: run config still names port {bad}: "
+                                     f"{line.strip()}")
         self.proc = subprocess.Popen([AGW_BIN, "-f", run_cfg], cwd=self._tmpdir,
                                      stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      text=True, bufsize=1)
@@ -291,7 +352,10 @@ class Gateway:
 
 
 def main():
+    endpoints = require_endpoints()
     mode = os.environ.get("XID10_MODE", "delegation")
+    if mode in NEW_MODES:
+        return main_new(mode, endpoints)
     trigger_kind = os.environ.get("XID10_TRIGGER", "tool")
     config_path = os.environ.get("AGW_CONFIG") or os.path.join(
         _HERE, "agentgateway", CONFIGS[mode])
@@ -434,8 +498,190 @@ def main():
                 "client_transport": "HTTPTransport(modern=True), MCP 2026-07-28",
                 "upstream_methods_seen": up.methods_seen,
                 "recorded_calls": redacted_calls,
+                "endpoints": endpoints,
+                "gateway_run_config_sha256": hashlib.sha256(
+                    gw.run_config_text.encode()).hexdigest(),
             }, f, indent=2)
         print(f"saved run -> {out}")
+    finally:
+        gw.stop()
+        up.stop()
+
+
+# =========================================================================
+# New checks: scope narrowing (CoSAI 3.3.2) and issuer binding (3.2.2/3.3.2)
+# =========================================================================
+UNREGISTERED = "https://unregistered.test"
+PROVX, PROVY = "https://provx.test", "https://provy.test"
+
+
+def as_issue_k(sub, *, iss=None, email=None, scope="read:notes", key=None):
+    from urllib.parse import urlencode
+    q = {"sub": sub, "aud": API_AUD, "scope": scope}
+    for k, v in (("iss", iss), ("email", email), ("key", key)):
+        if v:
+            q[k] = v
+    with urllib.request.urlopen(f"{AS_BASE}/issue?{urlencode(q)}", timeout=10) as r:
+        return json.loads(r.read())["access_token"]
+
+
+def _get(url):
+    with urllib.request.urlopen(url, timeout=10) as r:
+        return json.loads(r.read())
+
+
+def ident_tok(label, token_fn):
+    """token_fn() -> user token; every connect also sends a fresh actor token."""
+    return Identity(label=label, connect=lambda: MCPClient(HTTPTransport(
+        AGW_URL, headers={"Authorization": f"Bearer {token_fn()}",
+                          "x-actor-token": as_actor_token()}, modern=True)))
+
+
+def discover_tool(token):
+    c = MCPClient(HTTPTransport(AGW_URL, headers={"Authorization": f"Bearer {token}",
+                                                  "x-actor-token": as_actor_token()},
+                                modern=True))
+    try:
+        c.initialize()
+        tools = c.list_tools()
+    finally:
+        try:
+            c.close()
+        except Exception:
+            pass
+    if not tools:
+        raise SystemExit("no tools discovered through agentgateway")
+    return tools[0]["name"]
+
+
+def save_new_run(name, payload):
+    """Save the run (always), marked run_valid / run_problems; exit 1 with an
+    ERROR line per problem when the broken fixture did not FAIL or a positive
+    control failed. An honest grade with all controls fine returns normally."""
+    problems = gate_run_problems(payload)
+    payload = {**payload, "run_valid": not problems, "run_problems": problems}
+    _save_new_run(name, payload)
+    if problems:
+        for prob in problems:
+            print(f"ERROR: {prob}", file=sys.stderr)
+        raise SystemExit(1)
+
+
+def _save_new_run(name, payload):
+    runs_dir = os.path.join(_HERE, "runs")
+    os.makedirs(runs_dir, exist_ok=True)
+    out = os.path.join(runs_dir, f"agentgateway-{name}-{int(time.time())}.json")
+    text = json.dumps(payload, indent=2, default=str)
+    if _JWT_RE.search(text):
+        raise SystemExit("refusing to save: a JWT-shaped string is in the run")
+    with open(out, "w") as f:
+        f.write(text)
+    print(f"saved run -> {out}")
+
+
+def main_new(mode, endpoints):
+    import xid10_thin_deputy_gate as thin
+    scopes_none = os.environ.get("XID10_GW_SCOPES", "").strip().upper() == "NONE"
+    cfg_key = "scope_narrowing-noscopes" if (mode == "scope_narrowing" and scopes_none) else mode
+    config_path = os.environ.get("AGW_CONFIG") or os.path.join(_HERE, "agentgateway", CONFIGS[cfg_key])
+    with open(config_path) as f:
+        config_text = f.read()
+    version = agw_version()
+    oc = _get(f"{AS_BASE}/.well-known/openid-configuration")
+    facts = {"lax_subject_issuer": oc.get("x_lax_subject_issuer"),
+             "providers": oc.get("x_providers"), "scope_cap": oc.get("x_scope_cap")}
+    print(f"=== MODE: {cfg_key} === agentgateway {version.get('version')}  AS {AS_BASE} {facts}")
+    if mode == "issuer_unregistered" and not facts["lax_subject_issuer"]:
+        raise SystemExit("issuer_unregistered needs the AS started with --lax-subject-issuer")
+    fx = dict(upstream_port=FIXTURE_PORT, deputy_port=FIXTURE_PORT + 1 if FIXTURE_PORT else 0)
+    broken = None
+    if mode == "scope_narrowing":
+        broken = thin.run_scope_fixture(AS_BASE, "scope_escalation", controls={}, **fx)
+    elif mode == "issuer_unregistered":
+        broken = thin.run_issuer_fixture(AS_BASE, "issuer_any", controls={}, **fx)
+    if broken is not None:
+        print(f"broken fixture: {broken.summary()}")
+    up = Upstream(UPSTREAM_AUD, _get(f"{AS_BASE}/jwks"), AS_ISSUER, UPSTREAM_PORT).start()
+    gw = Gateway(config_path)
+    base = {"gateway": "agentgateway", "gateway_version": version.get("version"),
+            "gateway_version_full": version, "mode": cfg_key,
+            "gateway_config_path": os.path.relpath(config_path, _REPO),
+            "gateway_config_sha256": hashlib.sha256(config_text.encode()).hexdigest(),
+            "endpoints": dict(endpoints, fixture_ports=[fx["upstream_port"], fx["deputy_port"]]),
+            "as_facts": facts,
+            "actor_source": f"caller-supplied x-actor-token ({ACTOR_CLIENT_ID!r})"}
+    try:
+        gw.start()
+        base["gateway_run_config_sha256"] = hashlib.sha256(gw.run_config_text.encode()).hexdigest()
+        base["gateway_run_config"] = gw.run_config_text
+        print(f"agentgateway up @ {AGW_URL}")
+        if mode == "scope_narrowing":
+            subj = thin.SUBJECT_SCOPE_BROAD
+            configured = "" if scopes_none else "read:notes"
+            tool = discover_tool(as_issue_k("alice", scope=subj))
+            res = run_scope_narrowing_probe(
+                AGW_URL, ident_tok("A", lambda: as_issue_k("alice", scope=subj)),
+                ident_tok("B", lambda: as_issue_k("bob", scope=subj)), upstream=up,
+                trigger=lambda c: c.call_tool(tool, {}), subject_scope=subj,
+                configured_scope=configured, exchange_lookup=thin.exchange_lookup_http(AS_BASE),
+                controls={"broken_fixture_failed": broken.grade == "FAIL"})
+            print(res.summary())
+            for c in res.per_call:
+                print(f"  {c['principal']}: {c['grade']} who={c['who_narrowed']}")
+            save_new_run(cfg_key, {**res.to_dict(), **base,
+                                   "gateway_scopes_config": None if scopes_none else ["read:notes"],
+                                   "broken_fixture": {"name": "thin_deputy scope_escalation",
+                                                      "grade": broken.grade,
+                                                      "reason": broken.reason}})
+        elif mode == "issuer_unregistered":
+            control_tok = as_issue_k("mallory", iss=PROVX, email="mallory@provx.test", key="provx")
+            probe_tok = as_issue_k("mallory", iss=UNREGISTERED, email="mallory@provx.test",
+                                   key="provx")
+            tool = discover_tool(control_tok)
+            res = run_issuer_unregistered_probe(
+                AGW_URL, control_identity=ident_tok("control", lambda: control_tok),
+                probe_identity=ident_tok("probe", lambda: probe_tok), upstream=up,
+                trigger=lambda c, n: c.call_tool(tool, {"nonce": n}),
+                probe_token_fp=_fp(probe_tok),
+                probe_issuer=UNREGISTERED, exchange_records=lambda: _get(f"{AS_BASE}/exchanges"),
+                controls={"broken_fixture_failed": broken.grade == "FAIL"}, quiet_seconds=3,
+                settle_seconds=2)
+            print(res.summary())
+            ev = res.evidence
+            print(f"  probe error: {ev['probe_error']}  exchange attempted: "
+                  f"{ev['exchange_attempted_with_probe_token']}")
+            save_new_run("issuer_unregistered", {**res.to_dict(), **base,
+                         "signing_key_of_probe": "provx (trusted by jwtAuth for provx)",
+                         "broken_fixture": {"name": "thin_deputy issuer_any",
+                                            "grade": broken.grade, "reason": broken.reason}})
+        elif mode == "issuer_email_crossprovider":
+            y_email = "carol@provy.test"
+            y_tok = as_issue_k("carol-y", iss=PROVY, email=y_email)
+            dave_tok = as_issue_k("dave-x", iss=PROVX, email="dave@provx.test")
+            probe_tok = as_issue_k("carol-x", iss=PROVX, email=y_email)
+            tool = discover_tool(y_tok)
+            trig = lambda c: c.call_tool(tool, {})
+            y_calls, y_err = observe_one_call(ident_tok("Y", lambda: y_tok), up, trig)
+            x_calls, x_err = observe_one_call(ident_tok("Xctl", lambda: dave_tok), up, trig)
+            p_calls, p_err = observe_one_call(ident_tok("probe", lambda: probe_tok), up, trig)
+            pc = [{"subject": c.subject, "issuer": c.issuer, "token": _fp(c.token),
+                   "email": up.emails.get(_fp(c.token)), "scope": c.scope} for c in p_calls]
+            grade, label, reason = grade_issuer_email_crossprovider(
+                probe_calls=pc, control_reached=bool(x_calls), x_issuer=PROVX, y_issuer=PROVY,
+                y_subject="carol-y", claimed_email=y_email)
+            print(f"[{grade}] {label}: {reason}")
+            save_new_run("issuer_email_crossprovider", {
+                "probe": "issuer_email_crossprovider",
+                "cosai": "CoSAI MCP Security v2.0, 3.2.2 / 3.3.2",
+                "grade": grade, "label": label, "reason": reason, **base,
+                "controls": {"y_reached_upstream": bool(y_calls),
+                             "x_control_reached_upstream": bool(x_calls)},
+                "observations": {
+                    "gateway_has_user_store": False,
+                    "probe_accepted": bool(p_calls), "probe_error": p_err,
+                    "probe_upstream_calls": pc,
+                    "y_upstream_identity": [(c.issuer, c.subject) for c in y_calls],
+                    "y_error": y_err, "x_control_error": x_err}})
     finally:
         gw.stop()
         up.stop()

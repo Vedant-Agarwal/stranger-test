@@ -1,0 +1,257 @@
+{
+  "probe": "handle",
+  "stage": "trial",
+  "gateway": "agentgateway",
+  "cosai": "3.2.7 / 3.2.12",
+  "ports": {
+    "as": 4600,
+    "gateway": 4601,
+    "upstream": 4602,
+    "agw_admin": 4603
+  },
+  "as_url": "http://127.0.0.1:4600",
+  "upstream_url": "http://127.0.0.1:4602/mcp",
+  "client_transport": "strangertest.handle.TasksHTTPTransport (HTTPTransport modern=True + Mcp-Name=taskId on tasks/*), MCP 2026-07-28, tasks extension declared in _meta clientCapabilities",
+  "gateway_url": "http://127.0.0.1:4601/mcp",
+  "gateway_version": "1.7.0",
+  "gateway_pid": 3884,
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "gateway_config_path": "integration/agentgateway/handle-token-exchange.yaml",
+  "gateway_config_template_sha256": "d2466f22807bf05249a58d8839c4c2b4cb2b630af8315379f7303d3683acc734",
+  "gateway_config_run": "# TASK-HANDLE gate: agentgateway in front of the practice task server, with\n# RFC 8693 TOKEN EXCHANGE (the compliant config: no token passthrough). Ports\n# are double-brace placeholders; the driver (integration/handle_gateway_gate.py)\n# writes a port-substituted copy to a scratch dir and refuses to run with any\n# placeholder left, or with a port outside its block. Everything is\n# loopback-only: agentgateway binds all interfaces by default, so every\n# listener is pinned to 127.0.0.1 and stats / readiness are off.\n#   client --(user JWT + x-actor-token)--> agentgateway 4601  (jwtAuth: local AS JWKS)\n#   agentgateway --(token exchange, delegation)--> local AS 4600/token\n#   agentgateway --(the exchanged token: aud = the upstream, act = the agent)-->\n#     practice task server 4602/mcp\n# The practice server runs with identity_from=\"jwt\": the caller is the\n# exchanged token's (orig_iss or iss, sub), so users A and B stay distinct\n# even though each request may carry a freshly exchanged token.\nconfig:\n  adminAddr: 127.0.0.1:4603\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  handle:\n    port: 4601\n    bindAddress: 127.0.0.1\nroutes:\n- name: handle-mcp\n  gateways: handle\n  policies:\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:4600/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: tasks\n        mcp:\n          host: http://127.0.0.1:4602/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:4600\n              path: /token\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "upstream_auth": "token exchange: backendAuth.oauthTokenExchange swaps the validated user JWT (subject) and the agent's x-actor-token (actor) at the local AS for a token with aud=https://upstream.test/mcp and act=the agent",
+  "upstream_identity_from": "jwt",
+  "backendauth_key_documented": [
+    "agentgateway docs, 'Static keys and passthrough' (standalone, latest): https://agentgateway.dev/docs/standalone/latest/documentation/configuration/security/backend-authn/key/ - 'Static key (key) sends a value that you configure, either inline or from a file on disk.'",
+    "agentgateway v1.7.0 generated config reference schema/config.md: <BackendPolicies>.backendAuth.key (with .file), next to backendAuth.passthrough ('Forward the validated incoming JWT to the backend.')",
+    "agentgateway v1.7.0 crates/agentgateway/src/http/auth/mod.rs BackendAuthKind::Key: 'Send a configured secret value, or a value computed from the request, to the backend.'",
+    "agentgateway v1.7.0 examples/llm-telemetry/tracing/phoenix.yaml: backendAuth: key: $GEMINI_API_KEY"
+  ],
+  "source_evidence": [
+    "agentgateway v1.7.0 crates/agentgateway/src/mcp/session.rs:736-756: GetTask/UpdateTask/CancelTask requests are parsed, authorized only by the configured static mcpAuthorization policy (authorize_task_request, session.rs:256-280: ResourceType::Task(target, taskId) against CEL rules), then sent to the upstream (send_single). No binding of a taskId to the user who created it.",
+    "handler.rs:205-237: taskIds in CreateTaskResult/GetTaskResult are rewritten to '<target>+<id>' only when there is no default target (multiplexing); with one target they pass through unchanged.",
+    "streamablehttp.rs:428-441: tasks/* are name-bearing; the Mcp-Name header must equal params.taskId, else -32020 'invalid MCP routing header'."
+  ],
+  "upstream": "strangertest.practice_handle_http mode=safe",
+  "upstream_mode": "safe",
+  "trial": {
+    "steps": [
+      {
+        "request": "tools/list",
+        "response": {
+          "result": [
+            {
+              "name": "start_job",
+              "description": "Start a task (tasks extension).",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "marker": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "request": "tools/call start_job kind=complete (tasks extension declared)",
+        "response": {
+          "result": {
+            "resultType": "task",
+            "taskId": "task-3003408054070069638cc4a96a3c1373",
+            "status": "working",
+            "createdAt": "2026-11-11T15:51:31.304332+00:00",
+            "lastUpdatedAt": "2026-11-11T15:51:31.304332+00:00",
+            "ttlMs": 60000,
+            "pollIntervalMs": 20
+          }
+        }
+      },
+      {
+        "request": "tasks/get task-3003408054070069638cc4a96a3c1373",
+        "response": {
+          "result": {
+            "resultType": "complete",
+            "taskId": "task-3003408054070069638cc4a96a3c1373",
+            "status": "completed",
+            "createdAt": "2026-11-11T15:51:31.304332+00:00",
+            "lastUpdatedAt": "2026-11-11T15:51:31.507733+00:00",
+            "ttlMs": 60000,
+            "pollIntervalMs": 20,
+            "result": {
+              "content": [
+                {
+                  "type": "text",
+                  "text": "st-trial-marker"
+                }
+              ]
+            }
+          }
+        }
+      },
+      {
+        "request": "tasks/update task-3003408054070069638cc4a96a3c1373",
+        "response": {
+          "result": {
+            "resultType": "complete"
+          }
+        }
+      },
+      {
+        "request": "tasks/cancel task-3003408054070069638cc4a96a3c1373",
+        "response": {
+          "result": {
+            "resultType": "complete"
+          }
+        }
+      }
+    ],
+    "upstream_seen": [
+      {
+        "method": "tools/list",
+        "tasks_ext_declared": true,
+        "identity": "sha256:7770ef4b3ea2",
+        "token": "sha256:a84d93d68d44",
+        "claims": {
+          "iss": "https://local-as.test",
+          "orig_iss": "https://local-as.test",
+          "sub": "alice",
+          "aud": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "act_sub": "handle-agent"
+        },
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": null
+      },
+      {
+        "method": "tools/call",
+        "tasks_ext_declared": true,
+        "identity": "sha256:7770ef4b3ea2",
+        "token": "sha256:a84d93d68d44",
+        "claims": {
+          "iss": "https://local-as.test",
+          "orig_iss": "https://local-as.test",
+          "sub": "alice",
+          "aud": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "act_sub": "handle-agent"
+        },
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": null
+      },
+      {
+        "method": "tasks/get",
+        "tasks_ext_declared": true,
+        "identity": "sha256:7770ef4b3ea2",
+        "token": "sha256:a84d93d68d44",
+        "claims": {
+          "iss": "https://local-as.test",
+          "orig_iss": "https://local-as.test",
+          "sub": "alice",
+          "aud": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "act_sub": "handle-agent"
+        },
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": "sha256:7770ef4b3ea2"
+      },
+      {
+        "method": "tasks/update",
+        "tasks_ext_declared": true,
+        "identity": "sha256:7770ef4b3ea2",
+        "token": "sha256:a84d93d68d44",
+        "claims": {
+          "iss": "https://local-as.test",
+          "orig_iss": "https://local-as.test",
+          "sub": "alice",
+          "aud": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "act_sub": "handle-agent"
+        },
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": "sha256:7770ef4b3ea2"
+      },
+      {
+        "method": "tasks/cancel",
+        "tasks_ext_declared": true,
+        "identity": "sha256:7770ef4b3ea2",
+        "token": "sha256:a84d93d68d44",
+        "claims": {
+          "iss": "https://local-as.test",
+          "orig_iss": "https://local-as.test",
+          "sub": "alice",
+          "aud": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "act_sub": "handle-agent"
+        },
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": "sha256:7770ef4b3ea2"
+      }
+    ],
+    "forwarding": {
+      "create_task_result_passed_through": true,
+      "tasks_get_reached_upstream": true,
+      "tasks_update_reached_upstream": true,
+      "tasks_cancel_reached_upstream": true,
+      "tasks_capability_in_upstream_meta_on_tools_call": true
+    },
+    "completed": true,
+    "problems": []
+  },
+  "methods": {
+    "get": {
+      "grade": null,
+      "detail": "tasks/get reached the upstream"
+    },
+    "update": {
+      "grade": null,
+      "detail": "tasks/update reached the upstream"
+    },
+    "cancel": {
+      "grade": null,
+      "detail": "tasks/cancel reached the upstream"
+    }
+  },
+  "observations": [
+    "create_task_result_passed_through: True",
+    "tasks_get_reached_upstream: True",
+    "tasks_update_reached_upstream: True",
+    "tasks_cancel_reached_upstream: True",
+    "tasks_capability_in_upstream_meta_on_tools_call: True"
+  ],
+  "controls": {
+    "single_identity_trial": "one user, own task only; no A/B probe run",
+    "upstream_supports_tasks_directly": "the same practice server returns CreateTaskResult and serves tasks/* when called directly (tests/test_handle.py)"
+  },
+  "grade": null,
+  "grade_note": "trial only: the gateway forwards the tasks extension; run HANDLE_STAGE=probe for a grade",
+  "upstream_protocol_versions_seen": [
+    "2026-07-28"
+  ],
+  "upstream_meta_protocol_versions_seen": [
+    "2026-07-28"
+  ],
+  "agw_config": "token-exchange",
+  "grade_subject": "gateway path: agentgateway 1.7.0 configured by us with jwtAuth + backendAuth.oauthTokenExchange (RFC 8693 delegation, the compliant config) in front of the practice task server (safe)",
+  "counts_toward_gateway_verdict": true,
+  "run_valid": true,
+  "run_problems": []
+}

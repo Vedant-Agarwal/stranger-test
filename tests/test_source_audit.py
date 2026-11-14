@@ -223,9 +223,10 @@ class CliSurveyTests(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertNotIn("CANDIDATE", out)
 
-    def test_missing_path_exits_2(self):
+    def test_missing_path_exits_3(self):
+        # A missing path is a usage error -> exit 3 (unified scheme).
         code, _, err = self._run(["survey", os.path.join(FIXTURES, "nope")])
-        self.assertEqual(code, 2)
+        self.assertEqual(code, 3)
         self.assertIn("no such path", err)
 
 

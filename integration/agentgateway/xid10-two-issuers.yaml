@@ -18,8 +18,9 @@ routes:
 - name: xid10-mcp
   gateways: xid10
   policies:
-    # Inbound: two trusted providers. Both are served by the local AS (same
-    # JWKS), but they are different issuers: alice@provX and alice@provY are
+    # Inbound: two trusted providers, each with its OWN signing key (the local
+    # AS serves one JWKS per provider at /jwks/<name>). They are different
+    # issuers: alice@provX and alice@provY are
     # different principals and must stay distinct through the exchange.
     jwtAuth:
       mode: strict
@@ -27,11 +28,11 @@ routes:
       - issuer: https://provx.test
         audiences: [agentgateway-api]
         jwks:
-          url: http://127.0.0.1:8790/jwks
+          url: http://127.0.0.1:8790/jwks/provx
       - issuer: https://provy.test
         audiences: [agentgateway-api]
         jwks:
-          url: http://127.0.0.1:8790/jwks
+          url: http://127.0.0.1:8790/jwks/provy
   backends:
   - mcp:
       statefulMode: stateful

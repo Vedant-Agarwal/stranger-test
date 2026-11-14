@@ -1,0 +1,181 @@
+{
+  "probe": "handle",
+  "stage": "trial",
+  "gateway": "contextforge",
+  "cosai": "3.2.7 / 3.2.12",
+  "ports": {
+    "as": 4290,
+    "gateway": 4244,
+    "upstream": 4280
+  },
+  "as_url": "http://127.0.0.1:4290",
+  "upstream_url": "http://127.0.0.1:4280/mcp",
+  "client_transport": "strangertest.handle.TasksHTTPTransport (HTTPTransport modern=True + Mcp-Name=taskId on tasks/*), MCP 2026-07-28, tasks extension declared in _meta clientCapabilities",
+  "gateway_url": "http://127.0.0.1:4244/servers/d5056204b9aa42fd9a3f248dd41edc06/mcp",
+  "gateway_version": "1.1.1",
+  "gateway_pid": 92561,
+  "cf_home": "<scratch>",
+  "upstream_auth": "none configured on the registered gateway (trial only)",
+  "source_evidence": [
+    "mcp-contextforge-gateway 1.1.1 mcpgateway/transports/streamablehttp_transport.py:4030-4040: the MCP server registers handlers for server/discover, tools/list, tools/call, prompts/*, resources/*, completion/complete, logging/setLevel only; no tasks/get, tasks/update or tasks/cancel handler, so the SDK answers -32601.",
+    "streamablehttp_transport.py:2104-2130: tools/call returns a types.CallToolResult (normal mode converts the upstream ToolResult; direct_proxy returns the raw CallToolResult); no CreateTaskResult path.",
+    "No reference to 'io.modelcontextprotocol/tasks', 'tasks/get' or 'CreateTaskResult' anywhere under mcpgateway/ (grep); the only 'tasks/get'/'tasks/cancel' strings are the A2A protocol routes (main.py:10455-10530, services/a2a_protocol.py:40-42), not MCP."
+  ],
+  "upstream": "strangertest.practice_handle_http mode=safe",
+  "upstream_mode": "safe",
+  "trial": {
+    "steps": [
+      {
+        "request": "tools/list",
+        "response": {
+          "result": [
+            {
+              "annotations": {},
+              "description": "Start a task (tasks extension).",
+              "inputSchema": {
+                "type": "object",
+                "properties": {
+                  "marker": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  }
+                }
+              },
+              "name": "handle-1794385815-start-job"
+            }
+          ]
+        }
+      },
+      {
+        "request": "tools/call handle-1794385815-start-job kind=complete (tasks extension declared)",
+        "response": {
+          "result": {
+            "content": [
+              {
+                "text": "done",
+                "type": "text"
+              }
+            ],
+            "isError": false,
+            "resultType": "complete",
+            "_meta": {
+              "io.modelcontextprotocol/serverInfo": {
+                "name": "ContextForge",
+                "version": "1.1.1"
+              }
+            }
+          }
+        }
+      },
+      {
+        "request": "tasks/get (no taskId was returned; placeholder id)",
+        "response": {
+          "transport_failure": "HTTP 404 from http://127.0.0.1:4244/servers/d5056204b9aa42fd9a3f248dd41edc06/mcp: {\"jsonrpc\":\"2.0\",\"id\":4,\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"tasks/get\"}}"
+        }
+      },
+      {
+        "request": "tasks/update (no taskId was returned; placeholder id)",
+        "response": {
+          "transport_failure": "HTTP 404 from http://127.0.0.1:4244/servers/d5056204b9aa42fd9a3f248dd41edc06/mcp: {\"jsonrpc\":\"2.0\",\"id\":5,\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"tasks/update\"}}"
+        }
+      },
+      {
+        "request": "tasks/cancel (no taskId was returned; placeholder id)",
+        "response": {
+          "transport_failure": "HTTP 404 from http://127.0.0.1:4244/servers/d5056204b9aa42fd9a3f248dd41edc06/mcp: {\"jsonrpc\":\"2.0\",\"id\":6,\"error\":{\"code\":-32601,\"message\":\"Method not found\",\"data\":\"tasks/cancel\"}}"
+        }
+      }
+    ],
+    "upstream_seen": [
+      {
+        "method": "server/discover",
+        "tasks_ext_declared": false,
+        "identity": "sha256:2f183a4e6449",
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": null
+      },
+      {
+        "method": "tools/list",
+        "tasks_ext_declared": false,
+        "identity": "sha256:2f183a4e6449",
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": null
+      },
+      {
+        "method": "server/discover",
+        "tasks_ext_declared": false,
+        "identity": "sha256:2f183a4e6449",
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": null
+      },
+      {
+        "method": "tools/call",
+        "tasks_ext_declared": false,
+        "identity": "sha256:2f183a4e6449",
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": null
+      },
+      {
+        "method": "tools/list",
+        "tasks_ext_declared": false,
+        "identity": "sha256:2f183a4e6449",
+        "protocol_header": "2026-07-28",
+        "meta_protocol": "2026-07-28",
+        "task_owner": null
+      }
+    ],
+    "forwarding": {
+      "create_task_result_passed_through": false,
+      "tasks_get_reached_upstream": false,
+      "tasks_update_reached_upstream": false,
+      "tasks_cancel_reached_upstream": false,
+      "tasks_capability_in_upstream_meta_on_tools_call": false
+    },
+    "completed": true,
+    "problems": []
+  },
+  "methods": {
+    "get": {
+      "grade": "INCONCLUSIVE",
+      "detail": "tasks/get never reached the upstream; gateway answered {\"transport_failure\": \"HTTP 404 from http://127.0.0.1:4244/servers/d5056204b9aa42fd9a3f248dd41edc06/mcp: {\\\"jsonrpc\\\":\\\"2.0\\\",\\\"id\\\":4,\\\"error\\\":{\\\"code\\\":-32601,\\\"message\\\":\\\"Method not found\\\",\\\"dat"
+    },
+    "update": {
+      "grade": "INCONCLUSIVE",
+      "detail": "tasks/update never reached the upstream; gateway answered {\"transport_failure\": \"HTTP 404 from http://127.0.0.1:4244/servers/d5056204b9aa42fd9a3f248dd41edc06/mcp: {\\\"jsonrpc\\\":\\\"2.0\\\",\\\"id\\\":5,\\\"error\\\":{\\\"code\\\":-32601,\\\"message\\\":\\\"Method not found\\\",\\\"dat"
+    },
+    "cancel": {
+      "grade": "INCONCLUSIVE",
+      "detail": "tasks/cancel never reached the upstream; gateway answered {\"transport_failure\": \"HTTP 404 from http://127.0.0.1:4244/servers/d5056204b9aa42fd9a3f248dd41edc06/mcp: {\\\"jsonrpc\\\":\\\"2.0\\\",\\\"id\\\":6,\\\"error\\\":{\\\"code\\\":-32601,\\\"message\\\":\\\"Method not found\\\",\\\"dat"
+    }
+  },
+  "observations": [
+    "create_task_result_passed_through: False",
+    "tasks_get_reached_upstream: False",
+    "tasks_update_reached_upstream: False",
+    "tasks_cancel_reached_upstream: False",
+    "tasks_capability_in_upstream_meta_on_tools_call: False"
+  ],
+  "controls": {
+    "single_identity_trial": "one user, own task only; no A/B probe run",
+    "upstream_supports_tasks_directly": "the same practice server returns CreateTaskResult and serves tasks/* when called directly (tests/test_handle.py)"
+  },
+  "grade": "INCONCLUSIVE",
+  "reason": "the gateway does not forward the MCP tasks extension: create_task_result_passed_through, tasks_get_reached_upstream, tasks_update_reached_upstream, tasks_cancel_reached_upstream, tasks_capability_in_upstream_meta_on_tools_call (see trial.steps / trial.upstream_seen)",
+  "upstream_protocol_versions_seen": [
+    "2026-07-28"
+  ],
+  "upstream_meta_protocol_versions_seen": [
+    "2026-07-28"
+  ],
+  "agw_config": null,
+  "grade_subject": "gateway: ContextForge 1.1.1 (default settings, STREAMABLEHTTP gateway) in front of the practice task server (safe)",
+  "counts_toward_gateway_verdict": true,
+  "run_valid": true,
+  "run_problems": []
+}

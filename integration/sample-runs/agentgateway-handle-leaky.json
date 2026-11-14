@@ -1,0 +1,303 @@
+{
+  "probe": "handle",
+  "stage": "probe",
+  "gateway": "agentgateway",
+  "cosai": "3.2.7 / 3.2.12",
+  "ports": {
+    "as": 4600,
+    "gateway": 4601,
+    "upstream": 4602,
+    "agw_admin": 4603
+  },
+  "as_url": "http://127.0.0.1:4600",
+  "upstream_url": "http://127.0.0.1:4602/mcp",
+  "client_transport": "strangertest.handle.TasksHTTPTransport (HTTPTransport modern=True + Mcp-Name=taskId on tasks/*), MCP 2026-07-28, tasks extension declared in _meta clientCapabilities",
+  "gateway_url": "http://127.0.0.1:4601/mcp",
+  "gateway_version": "1.7.0",
+  "gateway_pid": 3926,
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "gateway_config_path": "integration/agentgateway/handle-per-user.yaml",
+  "gateway_config_template_sha256": "b6006013bc552ae64d5ed2ff9ebb1161fb115ba5d04d834b7c8aafd18f9bd914",
+  "gateway_config_run": "# TASK-HANDLE gate: agentgateway in front of the practice task server, with\n# PER-USER upstream identity. Ports are double-brace placeholders; the driver\n# (integration/handle_gateway_gate.py) writes a port-substituted copy to a\n# scratch dir and refuses to run with any placeholder left, or with a port\n# outside its block. Everything is loopback-only: agentgateway binds all\n# interfaces by default, so every listener is pinned to 127.0.0.1 and stats /\n# readiness are off.\n#   client --(user JWT)--> agentgateway 4601  (jwtAuth: local AS JWKS)\n#   agentgateway --(the same validated user JWT, backendAuth.passthrough)-->\n#     practice task server 4602/mcp\n# The practice server identifies the caller by its Authorization header, so\n# users A and B stay distinct at the upstream, which does the task owner check.\nconfig:\n  adminAddr: 127.0.0.1:4603\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  handle:\n    port: 4601\n    bindAddress: 127.0.0.1\nroutes:\n- name: handle-mcp\n  gateways: handle\n  policies:\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:4600/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: tasks\n        mcp:\n          host: http://127.0.0.1:4602/mcp\n        policies:\n          backendAuth:\n            passthrough: {}\n",
+  "upstream_auth": "per-user passthrough: backendAuth.passthrough forwards the validated user JWT unchanged (a token-passthrough config)",
+  "upstream_identity_from": "header",
+  "backendauth_key_documented": [
+    "agentgateway docs, 'Static keys and passthrough' (standalone, latest): https://agentgateway.dev/docs/standalone/latest/documentation/configuration/security/backend-authn/key/ - 'Static key (key) sends a value that you configure, either inline or from a file on disk.'",
+    "agentgateway v1.7.0 generated config reference schema/config.md: <BackendPolicies>.backendAuth.key (with .file), next to backendAuth.passthrough ('Forward the validated incoming JWT to the backend.')",
+    "agentgateway v1.7.0 crates/agentgateway/src/http/auth/mod.rs BackendAuthKind::Key: 'Send a configured secret value, or a value computed from the request, to the backend.'",
+    "agentgateway v1.7.0 examples/llm-telemetry/tracing/phoenix.yaml: backendAuth: key: $GEMINI_API_KEY"
+  ],
+  "source_evidence": [
+    "agentgateway v1.7.0 crates/agentgateway/src/mcp/session.rs:736-756: GetTask/UpdateTask/CancelTask requests are parsed, authorized only by the configured static mcpAuthorization policy (authorize_task_request, session.rs:256-280: ResourceType::Task(target, taskId) against CEL rules), then sent to the upstream (send_single). No binding of a taskId to the user who created it.",
+    "handler.rs:205-237: taskIds in CreateTaskResult/GetTaskResult are rewritten to '<target>+<id>' only when there is no default target (multiplexing); with one target they pass through unchanged.",
+    "streamablehttp.rs:428-441: tasks/* are name-bearing; the Mcp-Name header must equal params.taskId, else -32020 'invalid MCP routing header'."
+  ],
+  "upstream": "strangertest.practice_handle_http mode=leaky",
+  "upstream_mode": "leaky",
+  "probe_grade": "LEAK",
+  "detail": "B used A's task handle: get (B received A's marker), update (after B's tasks/update, A's task changed ('input_required' -> 'completed')), cancel (after B's tasks/cancel, A's task changed ('working' -> 'cancelled'))",
+  "summary": "LEAK: identity 'B' could use identity 'A''s task handle via tasks/get, tasks/update, tasks/cancel - cross-identity saved-reference (task handle) leak.",
+  "methods": {
+    "get": {
+      "grade": "LEAK",
+      "detail": "B received A's marker"
+    },
+    "update": {
+      "grade": "LEAK",
+      "detail": "after B's tasks/update, A's task changed ('input_required' -> 'completed')"
+    },
+    "cancel": {
+      "grade": "LEAK",
+      "detail": "after B's tasks/cancel, A's task changed ('working' -> 'cancelled')"
+    }
+  },
+  "per_method": {
+    "get": {
+      "grade": "LEAK",
+      "detail": "B received A's marker",
+      "b_request_on_a_task_reached_upstream_as_b": true,
+      "enforced_by": "nobody (B's request reached the upstream as B and was served)"
+    },
+    "update": {
+      "grade": "LEAK",
+      "detail": "after B's tasks/update, A's task changed ('input_required' -> 'completed')",
+      "b_request_on_a_task_reached_upstream_as_b": true,
+      "enforced_by": "nobody (B's request reached the upstream as B and was served)"
+    },
+    "cancel": {
+      "grade": "LEAK",
+      "detail": "after B's tasks/cancel, A's task changed ('working' -> 'cancelled')",
+      "b_request_on_a_task_reached_upstream_as_b": true,
+      "enforced_by": "nobody (B's request reached the upstream as B and was served)"
+    }
+  },
+  "leaked_methods": [
+    "get",
+    "update",
+    "cancel"
+  ],
+  "observations": [],
+  "identity_fingerprints": {
+    "A_inbound": "sha256:5b77a2b02018",
+    "B_inbound": "sha256:7055a83a741a",
+    "A_upstream": "sha256:5b77a2b02018",
+    "B_upstream": "sha256:7055a83a741a"
+  },
+  "token_exchange_at_upstream": null,
+  "upstream_identities_on_tools_call": [
+    "sha256:5b77a2b02018",
+    "sha256:7055a83a741a"
+  ],
+  "upstream_saw_inbound_token_as_identity": {
+    "A": true,
+    "B": true
+  },
+  "upstream_distinguishes_users": true,
+  "upstream_methods_seen": [
+    [
+      "tools/call",
+      "sha256:5b77a2b02018",
+      null,
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tools/call",
+      "sha256:5b77a2b02018",
+      null,
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tools/call",
+      "sha256:5b77a2b02018",
+      null,
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tools/call",
+      "sha256:7055a83a741a",
+      null,
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tools/call",
+      "sha256:7055a83a741a",
+      null,
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tasks/update",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tools/call",
+      "sha256:7055a83a741a",
+      null,
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tasks/cancel",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:7055a83a741a",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:7055a83a741a",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/update",
+      "sha256:7055a83a741a",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/cancel",
+      "sha256:7055a83a741a",
+      "sha256:5b77a2b02018",
+      true
+    ],
+    [
+      "tasks/get",
+      "sha256:5b77a2b02018",
+      "sha256:5b77a2b02018",
+      true
+    ]
+  ],
+  "upstream_protocol_versions_seen": [
+    "2026-07-28"
+  ],
+  "upstream_meta_protocol_versions_seen": [
+    "2026-07-28"
+  ],
+  "controls": {
+    "in_probe": "strangertest.handle positive controls passed or the method would be INCONCLUSIVE: A reads its own three tasks (marker exact-match), B starts/reads/updates/cancels its OWN tasks through the same gateway, drift check on A's task before B acts, nonexistent-taskId comparison",
+    "broken_fixture_through_same_gateway": {
+      "upstream_mode": "leaky",
+      "probe_grade": "LEAK",
+      "detected": true,
+      "gateway_pid": 3926
+    },
+    "distinct_inbound_users": true
+  },
+  "grade": "LEAK",
+  "agw_config": "per-user",
+  "grade_subject": "gateway path: agentgateway 1.7.0 configured by us with jwtAuth + backendAuth.passthrough (per-user upstream identity) in front of the practice task server (leaky)",
+  "counts_toward_gateway_verdict": false,
+  "violates_no_token_passthrough": true,
+  "run_valid": true,
+  "run_problems": []
+}
