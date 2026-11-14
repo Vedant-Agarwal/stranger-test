@@ -23,33 +23,41 @@
       "actor": "forge",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:af836e310bfd",
+      "token": "sha256:8a40721c1c51",
       "issuer": "https://provx.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     },
     {
       "subject": "alice",
       "actor": "forge",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:1b1223085d48",
+      "token": "sha256:63b47270d087",
       "issuer": "https://provy.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     },
     {
       "subject": "alice",
       "actor": "forge",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:af836e310bfd",
+      "token": "sha256:8a40721c1c51",
       "issuer": "https://provx.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     }
-  ]
+  ],
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4790",
+    "cf_url": "http://127.0.0.1:4744",
+    "upstream_port": 4780
+  }
 }

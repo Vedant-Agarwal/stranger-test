@@ -39,6 +39,59 @@ B subscribes to A's resource; A changes it; did B hear about it?
 The `leaky` line is the detection; the `safe` line is the same probe reporting a
 correctly-scoped server clean.
 
+### On the command line
+
+The `strangertest` CLI demonstrates a probe against the bundled practice servers
+(leaky then safe) with `demo`, and probes a server you are authorized to test
+with `scan` (read/marker probe) and `handle` (task-handle probe).
+
+```
+python3 -m strangertest demo --probe handle
+```
+
+```
+[leaky]
+LEAK: identity 'B' could use identity 'A''s task handle via tasks/get, tasks/update, tasks/cancel - cross-identity saved-reference (task handle) leak.
+[safe]
+OK: identity 'B' could not get, update or cancel identity 'A''s task.
+```
+
+```
+python3 -m strangertest demo --probe cachescope
+```
+
+```
+[leaky]
+labelling: OK - content differs per identity and is labelled private
+honouring: LEAK - B received A's private content for the identical request
+[safe]
+labelling: OK - content differs per identity and is labelled private
+honouring: OK - caching observed, and B received B's own content, not A's
+```
+
+`demo` exits **0** when the demonstration holds — the leaky server leaks **and**
+the safe one does not — and **1** otherwise. So a printed `LEAK` line with exit
+`0` is expected: it is the demo working, not a finding against you.
+
+To probe a server you run, point `handle` at it as two identities (non-local
+targets require `--authorized`):
+
+```
+python3 -m strangertest handle https://your-gateway.example/mcp \
+  --token-a "$TOKEN_A" --token-b "$TOKEN_B" \
+  --authorized --authorization-note "you@example, staging"
+```
+
+Every command shares one exit-code scheme — **0** OK, **1** LEAK or FAIL,
+**2** INCONCLUSIVE, **3** usage error or authorization refusal — so any of them
+works as a CI gate.
+
+**Not every check is a one-URL scan.** The delegation, scope and issuer checks
+need a login server and a recording upstream; the private-cache check needs a
+recording upstream. They run from the [integration gates](#integration-gates),
+not the command line. `demo --probe cachescope` shows the cache check locally
+against a bundled practice upstream.
+
 ## How it works
 
 Every probe is an **A/B probe**: act as identity **A**, observe as identity
@@ -77,6 +130,17 @@ The three probes:
 (subprocess, newline-delimited JSON-RPC) and **Streamable HTTP** (JSON or SSE),
 including the 2026-07-28 "modern" per-request envelope.
 
+## What's new in 0.1.0
+
+- New CLI commands: `handle` (task-handle probe as two identities) and
+  `demo --probe {cache,handle,cachescope}` (run a probe against the bundled
+  practice servers in leaky then safe mode).
+- **Behaviour change — exit codes.** Every command now shares one scheme:
+  `0` = OK, `1` = LEAK or FAIL, `2` = INCONCLUSIVE (including transport errors
+  where nothing could be observed), `3` = usage error or authorization refusal.
+  An **authorization refusal now exits 3, not 2**; a usage error also exits 3.
+  Inconclusive and transport errors stay 2.
+
 ## Install and run
 
 Requires Python 3.9+. The core library and unit tests use the standard library
@@ -100,7 +164,7 @@ Unit tests, from a clone of the repository root:
 python3 -m unittest discover
 ```
 
-(106 tests.)
+(270 tests; the 10 in `tests/test_gen_results.py` and the 11 in `tests/test_cf_provider_api.py` are skipped unless pyjwt[crypto] is installed.)
 
 ## Integration gates
 
@@ -115,7 +179,19 @@ skip cleanly when their dependencies are absent.
   the delegation probe over a real RFC 8693 token exchange against a set of
   deliberately-broken deputy fixtures: `static_credential`, `token_passthrough`,
   `cached_token_reuse`, and a conflated-issuer case. Each is a known leak the
-  probe must flag, for the right reason.
+  probe must flag, for the right reason. It also runs the scope-narrowing and
+  issuer-binding fixtures. Its ports are **required**: `THIN_PORT_BASE=N` pins
+  the local AS on N, the lax AS on N+1, the recording upstream on N+2 and the
+  deputy on N+3, all on 127.0.0.1. The gate refuses to start without it, and
+  refuses any of those ports if it is 8790 or 4444:
+
+  ```
+  THIN_PORT_BASE=4500 <venv>/bin/python integration/xid10_thin_deputy_gate.py
+  ```
+
+  (`THIN_NEW_CHECKS_OUT=<file>` also saves the scope and issuer fixture
+  results.) Used as a library, e.g. by `integration/gen_results.py`, the
+  fixtures take ephemeral ports when `THIN_PORT_BASE` is unset.
 - **XID-10 ContextForge gate** (`integration/xid10_contextforge_gate.py`) —
   drives the delegation probe through a real IBM ContextForge gateway doing
   RFC 8693 token exchange. Configured by `XID10_MODE`

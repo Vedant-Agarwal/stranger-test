@@ -42,6 +42,18 @@ _HEADER_SAFE = _re.compile(r"^[\x20-\x7E]*$")
 _B64_SENTINEL = _re.compile(r"^=\?base64\?.*\?=$")
 
 
+# The tasks extension (SEP-2663) makes tasks/* name-bearing: Mcp-Name mirrors
+# params.taskId. Pass this as ``HTTPTransport(name_bearing_methods=...)``.
+# Without it a gateway that validates routing headers refuses every tasks/*
+# request as malformed (agentgateway 1.7.0: -32020 "invalid MCP routing
+# header: Mcp-Name"), a refusal that is not an authorization decision.
+TASK_NAME_BEARING_METHODS: Dict[str, str] = {
+    "tasks/get": "taskId",
+    "tasks/update": "taskId",
+    "tasks/cancel": "taskId",
+}
+
+
 def _encode_header_value(value: str) -> str:
     if _HEADER_SAFE.fullmatch(value) and value == value.strip() and not _B64_SENTINEL.fullmatch(value):
         return value
@@ -150,7 +162,19 @@ class HTTPTransport(Transport):
         declared_version: str = "2026-07-28",
         client_info: Optional[Dict[str, Any]] = None,
         client_capabilities: Optional[Dict[str, Any]] = None,
+        name_bearing_methods: Optional[Dict[str, str]] = None,
     ):
+        """``name_bearing_methods`` adds methods (method -> params key) whose
+        param is mirrored into the ``Mcp-Name`` header in modern mode, on top
+        of the core ones (tools/call, prompts/get, resources/read), e.g.
+        :data:`TASK_NAME_BEARING_METHODS`. Default: core methods only. A core
+        method cannot be redefined."""
+        extra = dict(name_bearing_methods or {})
+        clash = {m: k for m, k in extra.items()
+                 if m in NAME_BEARING_METHODS and NAME_BEARING_METHODS[m] != k}
+        if clash:
+            raise ValueError(f"name_bearing_methods cannot redefine core methods: {clash}")
+        self._name_bearing = {**NAME_BEARING_METHODS, **extra}
         self._url = url
         self._base_headers = dict(headers or {})
         self._timeout = timeout
@@ -199,7 +223,7 @@ class HTTPTransport(Transport):
             MCP_PROTOCOL_VERSION_HEADER: self._declared_version,
             MCP_METHOD_HEADER: method or "",
         }
-        name_key = NAME_BEARING_METHODS.get(method or "")
+        name_key = self._name_bearing.get(method or "")
         if name_key is not None:
             value = params.get(name_key)
             if isinstance(value, str):

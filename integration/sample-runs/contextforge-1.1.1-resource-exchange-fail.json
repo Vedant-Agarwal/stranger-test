@@ -1,0 +1,441 @@
+{
+  "probe": "xid10-resource-read-exchange-failure",
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "install": "pip (mcp-contextforge-gateway==1.1.1), loopback only",
+  "method": "fresh oauth token-exchange gateway via /v1 REST; toggleable AS returns a signed token for a token-exchange grant in ok mode and HTTP 400 invalid_grant in fail mode (client_credentials discovery always succeeds); recorder echoes the client's requested protocolVersion; 3 test reads of distinct uncached template instances",
+  "oauth_config": {
+    "grant_type": "token-exchange",
+    "token_url": "http://127.0.0.1:8795/token",
+    "target_audience": "https://upstream.test/mcp",
+    "subject_token_source": "inbound_user_jwt",
+    "client_id": "forge",
+    "client_secret": "REDACTED",
+    "scopes": [
+      "read:notes"
+    ],
+    "requested_token_type": "urn:ietf:params:oauth:token-type:access_token",
+    "subject_token_type": "urn:ietf:params:oauth:token-type:jwt",
+    "discovery": {
+      "grant_type": "client_credentials",
+      "token_url": "http://127.0.0.1:8795/token",
+      "client_id": "forge",
+      "client_secret": "REDACTED",
+      "scopes": [
+        "read:notes"
+      ]
+    }
+  },
+  "upstream_url": "http://127.0.0.1:8797/mcp",
+  "inbound_caller": "admin JWT (3-part; CF looks_like_jwt guard passes, real exchange attempted)",
+  "trigger": "MCP resources/read via virtual server POST /servers/{id}/mcp (the federated read path)",
+  "control_read_reached_upstream": true,
+  "control_read_auth_present": true,
+  "test_reads": [
+    {
+      "phase": "TEST1",
+      "resources_read_reached_upstream": false,
+      "auth_present": null,
+      "caller_error": "JSONRPCError: [0] Token exchange failed for gateway 'xid10cf111_1794620102'. Contact your administrator.",
+      "caller_got_content": false
+    },
+    {
+      "phase": "TEST2",
+      "resources_read_reached_upstream": false,
+      "auth_present": null,
+      "caller_error": "JSONRPCError: [0] Token exchange failed for gateway 'xid10cf111_1794620102'. Contact your administrator.",
+      "caller_got_content": false
+    },
+    {
+      "phase": "TEST3",
+      "resources_read_reached_upstream": false,
+      "auth_present": null,
+      "caller_error": "JSONRPCError: [0] Token exchange failed for gateway 'xid10cf111_1794620102'. Contact your administrator.",
+      "caller_got_content": false
+    }
+  ],
+  "test_reads_deterministic": true,
+  "as_attempts": [
+    {
+      "mode": "ok",
+      "grant_type": "client_credentials",
+      "is_exchange": false,
+      "ts": 1794620103.1839879
+    },
+    {
+      "mode": "ok",
+      "grant_type": "client_credentials",
+      "is_exchange": false,
+      "ts": 1794620103.3867462
+    },
+    {
+      "mode": "ok",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620103.956227
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620104.177082
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620105.1907141
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620107.203649
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620107.447413
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620108.4602292
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620110.480756
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620110.720308
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620111.732977
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620113.746817
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620113.989304
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620115.00172
+    },
+    {
+      "mode": "fail",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "is_exchange": true,
+      "ts": 1794620117.014946
+    }
+  ],
+  "upstream_calls": [
+    {
+      "method": "server/discover",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5f8caa35fed2",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-method",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.251387
+    },
+    {
+      "method": "initialize",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5f8caa35fed2",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.2541718
+    },
+    {
+      "method": "notifications/initialized",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5f8caa35fed2",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.2561028
+    },
+    {
+      "method": "tools/list",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5f8caa35fed2",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.256992
+    },
+    {
+      "method": "resources/list",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5f8caa35fed2",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.258218
+    },
+    {
+      "method": "resources/templates/list",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:5f8caa35fed2",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.259209
+    },
+    {
+      "method": "server/discover",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:887fbc175f5f",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-method",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.410382
+    },
+    {
+      "method": "initialize",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:887fbc175f5f",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.411341
+    },
+    {
+      "method": "notifications/initialized",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:887fbc175f5f",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.4122298
+    },
+    {
+      "method": "tools/list",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:887fbc175f5f",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.4128928
+    },
+    {
+      "method": "server/discover",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:3aef3ae01021",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-method",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.9788501
+    },
+    {
+      "method": "initialize",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:3aef3ae01021",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.979946
+    },
+    {
+      "method": "notifications/initialized",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:3aef3ae01021",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.981237
+    },
+    {
+      "method": "resources/read",
+      "auth_header_present": true,
+      "auth_scheme": "Bearer",
+      "token_fp": "sha256:3aef3ae01021",
+      "header_names": [
+        "Accept-Encoding",
+        "Authorization",
+        "Connection",
+        "Content-Length",
+        "Host",
+        "User-Agent",
+        "accept",
+        "content-type",
+        "mcp-protocol-version"
+      ],
+      "as_mode_at_time": "ok",
+      "ts": 1794620103.9820821
+    }
+  ],
+  "phase_markers": [
+    {
+      "_marker": "CONTROL",
+      "ts": 1794620103.480578
+    },
+    {
+      "_marker": "TEST1",
+      "ts": 1794620103.983575
+    },
+    {
+      "_marker": "TEST2",
+      "ts": 1794620107.220717
+    },
+    {
+      "_marker": "TEST3",
+      "ts": 1794620110.48912
+    },
+    {
+      "_marker": "CACHED",
+      "ts": 1794620113.7553039
+    }
+  ],
+  "verdict": "FAILS CLOSED: no resources/read reached upstream while the exchange was failing, and the caller got an error (control read DID reach upstream, so the read path works)"
+}

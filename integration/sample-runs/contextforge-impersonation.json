@@ -25,33 +25,41 @@
       "actor": null,
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:6055eabf5815",
+      "token": "sha256:3b5701bf90e0",
       "issuer": "https://local-as.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     },
     {
       "subject": "bob",
       "actor": null,
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:5ff359911e49",
+      "token": "sha256:0f2c41b0c7f9",
       "issuer": "https://local-as.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     },
     {
       "subject": "alice",
       "actor": null,
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:6055eabf5815",
+      "token": "sha256:3b5701bf90e0",
       "issuer": "https://local-as.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     }
-  ]
+  ],
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4790",
+    "cf_url": "http://127.0.0.1:4744",
+    "upstream_port": 4780
+  }
 }

@@ -146,9 +146,33 @@ class ScanOverHTTPTests(unittest.TestCase):
         self.assertIn("OK", out)
 
     def test_public_target_refused_without_authorization(self):
-        # Guard refuses before any network call is made.
+        # Guard refuses before any network call is made: authorization
+        # refusal is exit 3 (usage/authorization), not 2.
         code, _ = self._run([
             "scan", "https://mcp.example.com/mcp", "--token-a", "AAA",
+            "--plant-tool", "kv_set", "--read-tool", "kv_get",
+        ])
+        self.assertEqual(code, 3)
+
+    def test_refusal_names_the_authorized_flag(self):
+        # The refusal message on the command line names the --authorized flag
+        # (the guard keeps the Python `authorized=True` wording for libraries).
+        from contextlib import redirect_stderr
+        err = io.StringIO()
+        with redirect_stderr(err):
+            code = main([
+                "scan", "https://mcp.example.com/mcp", "--token-a", "AAA",
+                "--plant-tool", "kv_set", "--read-tool", "kv_get",
+            ])
+        self.assertEqual(code, 3)
+        self.assertIn("--authorized", err.getvalue())
+        self.assertIn("re-run", err.getvalue())
+
+    def test_transport_error_is_inconclusive(self):
+        # Nothing could be observed (connection refused on a closed local
+        # port) -> INCONCLUSIVE, exit 2.
+        code, _ = self._run([
+            "scan", "http://127.0.0.1:1/mcp", "--token-a", "AAA",
             "--plant-tool", "kv_set", "--read-tool", "kv_get",
         ])
         self.assertEqual(code, 2)

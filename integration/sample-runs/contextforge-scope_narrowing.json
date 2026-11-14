@@ -1,0 +1,110 @@
+{
+  "probe": "scope_narrowing",
+  "cosai": "CoSAI MCP Security v2.0, 3.3.2",
+  "grade": "OK",
+  "label": "narrowed",
+  "reason": "narrower than the subject and equal to what the gateway requested",
+  "target": "http://127.0.0.1:4744/servers/8d7e45266408426abf4ca34d62f9e6ea/mcp",
+  "controls": {
+    "broken_fixture_failed": true,
+    "subject_scope_broader_than_configured": true
+  },
+  "observations": [],
+  "per_call": [
+    {
+      "subject_scope": "read:notes write:notes admin",
+      "requested_scope": "read:notes",
+      "requested_observed": true,
+      "issued_scope": "read:notes",
+      "upstream_scope": "read:notes",
+      "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+      "grade": "OK",
+      "label": "narrowed",
+      "reason": "narrower than the subject and equal to what the gateway requested",
+      "principal": "A",
+      "method": "tools/call",
+      "token": "sha256:05465325c746",
+      "subject": "alice",
+      "issuer": "https://local-as.test",
+      "exchange_actor_present": true,
+      "exchange_requested_audience": "https://upstream.test/mcp"
+    },
+    {
+      "subject_scope": "read:notes write:notes admin",
+      "requested_scope": "read:notes",
+      "requested_observed": true,
+      "issued_scope": "read:notes",
+      "upstream_scope": "read:notes",
+      "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+      "grade": "OK",
+      "label": "narrowed",
+      "reason": "narrower than the subject and equal to what the gateway requested",
+      "principal": "B",
+      "method": "tools/call",
+      "token": "sha256:dc9d267d23d3",
+      "subject": "bob",
+      "issuer": "https://local-as.test",
+      "exchange_actor_present": true,
+      "exchange_requested_audience": "https://upstream.test/mcp"
+    },
+    {
+      "subject_scope": "read:notes write:notes admin",
+      "requested_scope": "read:notes",
+      "requested_observed": true,
+      "issued_scope": "read:notes",
+      "upstream_scope": "read:notes",
+      "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+      "grade": "OK",
+      "label": "narrowed",
+      "reason": "narrower than the subject and equal to what the gateway requested",
+      "principal": "A",
+      "method": "tools/call",
+      "token": "sha256:4a15542be7b2",
+      "subject": "alice",
+      "issuer": "https://local-as.test",
+      "exchange_actor_present": true,
+      "exchange_requested_audience": "https://upstream.test/mcp"
+    }
+  ],
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "mode": "scope_narrowing",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4790",
+    "cf_url": "http://127.0.0.1:4744",
+    "upstream_port": 4780,
+    "upstream_url": "http://127.0.0.1:4780/mcp/r1794558915",
+    "fixture_ports": [
+      4770,
+      4771
+    ]
+  },
+  "as_facts": {
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "env": {
+    "SSO_API_TOKEN_AUTH_ENABLED": "true",
+    "SSO_ALLOW_PROVIDER_LINKING": null,
+    "SSRF_ALLOW_LOCALHOST": "true",
+    "MCP_CLIENT_CONNECT_MODE": "auto"
+  },
+  "sso_allow_provider_linking_default": "false (mcpgateway/config.py sso_allow_provider_linking)",
+  "gateway_config": {
+    "oauth_config_scopes": [
+      "read:notes"
+    ],
+    "oauth_config_sha256": "51e4356d536c928855c740549112e54a4cb7b3b006fe47e618bd64b4412e356b"
+  },
+  "broken_fixture": {
+    "name": "thin_deputy scope_escalation",
+    "grade": "FAIL",
+    "reason": "upstream scope holds ['delete:all'] that the subject token lacked"
+  },
+  "run_valid": true,
+  "run_problems": []
+}

@@ -1,0 +1,47 @@
+# Private-cache gate (CoSAI 3.2.7): agentgateway in front of the per-user
+# practice upstream. RFC 8693 token exchange per user (no actor), inbound users
+# validated by jwtAuth. No caching knob is set: agentgateway 1.7.0 has no MCP
+# result cache to configure (only backendAuth token-exchange response caching).
+#
+# This file is a TEMPLATE: cachescope_gateway_gate.py replaces every port below
+# (4330 gateway, 4331 admin, 4390 AS, 4380 upstream) from its env and runs the
+# copy from a scratch dir (agentgateway writes a session key into the file it
+# is given). Loopback only: agentgateway binds all interfaces by default, so
+# every listener is pinned to 127.0.0.1 and stats/readiness are off.
+config:
+  adminAddr: 127.0.0.1:4331
+  statsAddr: "off"
+  readinessAddr: "off"
+gateways:
+  cachescope:
+    port: 4330
+    bindAddress: 127.0.0.1
+routes:
+- name: cachescope-mcp
+  gateways: cachescope
+  policies:
+    jwtAuth:
+      mode: strict
+      providers:
+      - issuer: https://local-as.test
+        audiences: [agentgateway-api]
+        jwks:
+          url: http://127.0.0.1:4390/jwks
+  backends:
+  - mcp:
+      statefulMode: stateful
+      targets:
+      - name: upstream
+        mcp:
+          host: http://127.0.0.1:4380/mcp
+        policies:
+          backendAuth:
+            oauthTokenExchange:
+              host: 127.0.0.1:4390
+              path: /token
+              subjectToken:
+                source:
+                  expression: jwt.rawToken.unredacted()
+                tokenType: urn:ietf:params:oauth:token-type:jwt
+              audiences: [https://upstream.test/mcp]
+              scopes: [read:notes]

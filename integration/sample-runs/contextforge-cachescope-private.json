@@ -1,0 +1,318 @@
+{
+  "probe": "cachescope",
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "gateway_mode": "cache",
+  "cf_catalogued_content": [
+    {
+      "uri": "note://cachescope/inbox",
+      "text_content_stored": false,
+      "binary_content_stored": false
+    }
+  ],
+  "cf_url": "http://127.0.0.1:4344",
+  "cf_gateway_id": "a54feb7c9cec48598a7ffaae3574cb1c",
+  "cf_server_id": "55b8f822dec14c77b029c508a409927a",
+  "client_transport": "HTTPTransport(modern=True): MCP-Protocol-Version 2026-07-28 header + _meta envelope, no initialize",
+  "inbound_auth": "SSO provider trusted_for_api_auth (local AS JWKS, aud mcpgateway-api); users granted a team-scoped developer role (not admin)",
+  "upstream_auth": "oauth token-exchange gateway (RFC 8693, no actor) per user",
+  "protocol_versions": {
+    "client_to_gateway": "2026-07-28",
+    "client_to_gateway_note": "HTTPTransport(modern=True): MCP-Protocol-Version 2026-07-28 header + _meta envelope, no initialize",
+    "gateway_to_upstream_discover": [
+      "('server/discover', '2026-07-28')"
+    ],
+    "gateway_to_upstream_header": [
+      "2026-07-28"
+    ],
+    "upstream_speaks": "2026-07-28",
+    "direct_probe_to_upstream": "2026-07-28"
+  },
+  "grade_labelling_origin": "OK",
+  "grade_honouring": "INCONCLUSIVE",
+  "gateway_label_at_client": {
+    "cacheScope_present": true,
+    "cacheScope": "private",
+    "ttlMs": 60000,
+    "origin_cacheScope": "private",
+    "origin_ttlMs": 60000,
+    "content_user_specific": true,
+    "change": "unchanged",
+    "graded": false
+  },
+  "grade_notes": [],
+  "cosai": "3.2.7",
+  "grade_labelling_subject": "origin (practice upstream, cacheScope set by the operator)",
+  "grade_honouring_subject": "gateway (ContextForge) as a cache",
+  "uri": "note://cachescope/inbox",
+  "upstream_config": {
+    "cache_scope": "private",
+    "per_user": true,
+    "ttl_ms": 60000,
+    "unstable": false,
+    "content_key": "verified JWT (orig_iss|iss, sub); never the raw token"
+  },
+  "caching_trial": {
+    "origin_reads_per_gateway_read": [
+      1,
+      1
+    ],
+    "caches": false
+  },
+  "passthrough": {
+    "at_origin": {
+      "cacheScope_present": true,
+      "cacheScope": "private",
+      "ttlMs_present": true,
+      "ttlMs": 60000,
+      "resultType": "complete",
+      "content_uris": [
+        "note://cachescope/inbox"
+      ]
+    },
+    "at_client": {
+      "cacheScope_present": true,
+      "cacheScope": "private",
+      "ttlMs_present": true,
+      "ttlMs": 60000,
+      "resultType": "complete",
+      "content_uris": [
+        "note://cachescope/inbox"
+      ]
+    },
+    "cacheScope": "unchanged",
+    "ttlMs": "unchanged",
+    "error": null
+  },
+  "probe_result": {
+    "probe": "cachescope",
+    "target": "http://127.0.0.1:4344/servers/55b8f822dec14c77b029c508a409927a/mcp",
+    "upstream_target": "http://127.0.0.1:4381/mcp",
+    "authorization": "local development host (127.0.0.1)",
+    "identity_a": "A",
+    "identity_b": "B",
+    "uri": "note://cachescope/inbox",
+    "labelling": {
+      "grade": "OK",
+      "detail": "content differs per identity and is labelled private"
+    },
+    "honouring": {
+      "grade": "INCONCLUSIVE",
+      "detail": "no caching observed: the origin served A's repeat read, so the cache never stored the result and honouring was not exercised"
+    },
+    "observations": {
+      "origin_cache_scope": "private",
+      "origin_ttl_ms": 60000,
+      "origin_ttl_valid": true,
+      "origin_calls_step1": 1,
+      "origin_calls_step2": 1,
+      "caching_observed": false,
+      "hints_passed_through": true,
+      "b_received": "own",
+      "origin_stable": true,
+      "content_differs_per_identity": true
+    },
+    "leaked": false
+  },
+  "controls": {
+    "broken_leaky_proxy_private": {
+      "proxy_mode": "leaky",
+      "upstream_cache_scope": "private",
+      "grades": {
+        "labelling": "OK",
+        "honouring": "LEAK"
+      },
+      "error": null,
+      "honouring_detail": "B received A's private content for the identical request",
+      "labelling_detail": "content differs per identity and is labelled private",
+      "observations": {
+        "origin_cache_scope": "private",
+        "origin_ttl_ms": 60000,
+        "origin_ttl_valid": true,
+        "origin_calls_step1": 1,
+        "origin_calls_step2": 0,
+        "caching_observed": true,
+        "hints_passed_through": true,
+        "b_received": "a",
+        "origin_stable": true,
+        "content_differs_per_identity": true
+      },
+      "expected": {
+        "honouring": "LEAK"
+      },
+      "as_expected": true
+    },
+    "safe_proxy_private": {
+      "proxy_mode": "safe",
+      "upstream_cache_scope": "private",
+      "grades": {
+        "labelling": "OK",
+        "honouring": "OK"
+      },
+      "error": null,
+      "honouring_detail": "caching observed, and B received B's own content, not A's",
+      "labelling_detail": "content differs per identity and is labelled private",
+      "observations": {
+        "origin_cache_scope": "private",
+        "origin_ttl_ms": 60000,
+        "origin_ttl_valid": true,
+        "origin_calls_step1": 1,
+        "origin_calls_step2": 0,
+        "caching_observed": true,
+        "hints_passed_through": true,
+        "b_received": "own",
+        "origin_stable": true,
+        "content_differs_per_identity": true
+      },
+      "expected": {
+        "honouring": "OK"
+      },
+      "as_expected": true
+    },
+    "label_public_mislabel": {
+      "proxy_mode": "safe",
+      "upstream_cache_scope": "public",
+      "grades": {
+        "labelling": "LEAK",
+        "honouring": "INCONCLUSIVE"
+      },
+      "error": null,
+      "honouring_detail": "origin label is public, not private: sharing is permitted or unspecified; see the labelling verdict",
+      "labelling_detail": "origin returns different content to A and B for the same request but labels it cacheScope=public",
+      "observations": {
+        "origin_cache_scope": "public",
+        "origin_ttl_ms": 60000,
+        "origin_ttl_valid": true,
+        "origin_calls_step1": 1,
+        "origin_calls_step2": 0,
+        "caching_observed": true,
+        "hints_passed_through": true,
+        "b_received": "a",
+        "origin_stable": true,
+        "content_differs_per_identity": true
+      },
+      "expected": {
+        "labelling": "LEAK"
+      },
+      "as_expected": true
+    },
+    "label_private": {
+      "proxy_mode": "safe",
+      "upstream_cache_scope": "private",
+      "grades": {
+        "labelling": "OK",
+        "honouring": "OK"
+      },
+      "error": null,
+      "honouring_detail": "caching observed, and B received B's own content, not A's",
+      "labelling_detail": "content differs per identity and is labelled private",
+      "observations": {
+        "origin_cache_scope": "private",
+        "origin_ttl_ms": 60000,
+        "origin_ttl_valid": true,
+        "origin_calls_step1": 1,
+        "origin_calls_step2": 0,
+        "caching_observed": true,
+        "hints_passed_through": true,
+        "b_received": "own",
+        "origin_stable": true,
+        "content_differs_per_identity": true
+      },
+      "expected": {
+        "labelling": "OK"
+      },
+      "as_expected": true
+    }
+  },
+  "upstream_methods_from_gateway": [
+    {
+      "method": "server/discover",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "resources/read",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "server/discover",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "resources/read",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "server/discover",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "resources/read",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "server/discover",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "resources/read",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "server/discover",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|bob"
+    },
+    {
+      "method": "resources/read",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|bob"
+    },
+    {
+      "method": "server/discover",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    },
+    {
+      "method": "resources/read",
+      "mcp_protocol_version": "2026-07-28",
+      "auth": true,
+      "identity": "https://local-as.test|alice"
+    }
+  ],
+  "upstream_unverified_reads": 0,
+  "run_valid": true,
+  "run_problems": [],
+  "ports": {
+    "as": 4391,
+    "upstream": 4381,
+    "gw": 4344,
+    "fixture": 4382
+  },
+  "urls": {
+    "as": "http://127.0.0.1:4391",
+    "upstream": "http://127.0.0.1:4381/mcp",
+    "gateway": "http://127.0.0.1:4344/servers/55b8f822dec14c77b029c508a409927a/mcp",
+    "fixture": "http://127.0.0.1:4382/mcp"
+  },
+  "tokens": "never stored; content keyed on verified identity, not the token",
+  "ts": 1794559316
+}

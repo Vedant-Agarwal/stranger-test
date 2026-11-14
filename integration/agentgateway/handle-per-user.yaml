@@ -1,0 +1,41 @@
+# TASK-HANDLE gate: agentgateway in front of the practice task server, with
+# PER-USER upstream identity. Ports are double-brace placeholders; the driver
+# (integration/handle_gateway_gate.py) writes a port-substituted copy to a
+# scratch dir and refuses to run with any placeholder left, or with a port
+# outside its block. Everything is loopback-only: agentgateway binds all
+# interfaces by default, so every listener is pinned to 127.0.0.1 and stats /
+# readiness are off.
+#   client --(user JWT)--> agentgateway {{GW_PORT}}  (jwtAuth: local AS JWKS)
+#   agentgateway --(the same validated user JWT, backendAuth.passthrough)-->
+#     practice task server {{UPSTREAM_PORT}}/mcp
+# The practice server identifies the caller by its Authorization header, so
+# users A and B stay distinct at the upstream, which does the task owner check.
+config:
+  adminAddr: 127.0.0.1:{{ADMIN_PORT}}
+  statsAddr: "off"
+  readinessAddr: "off"
+gateways:
+  handle:
+    port: {{GW_PORT}}
+    bindAddress: 127.0.0.1
+routes:
+- name: handle-mcp
+  gateways: handle
+  policies:
+    jwtAuth:
+      mode: strict
+      providers:
+      - issuer: https://local-as.test
+        audiences: [agentgateway-api]
+        jwks:
+          url: http://127.0.0.1:{{AS_PORT}}/jwks
+  backends:
+  - mcp:
+      statefulMode: stateful
+      targets:
+      - name: tasks
+        mcp:
+          host: http://127.0.0.1:{{UPSTREAM_PORT}}/mcp
+        policies:
+          backendAuth:
+            passthrough: {}

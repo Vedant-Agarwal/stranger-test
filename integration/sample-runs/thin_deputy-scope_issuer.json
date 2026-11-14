@@ -1,0 +1,380 @@
+{
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4500",
+    "lax_as_base": "http://127.0.0.1:4501",
+    "ports": {
+      "as": 4500,
+      "as_lax": 4501,
+      "upstream": 4502,
+      "deputy": 4503
+    }
+  },
+  "scope_escalation": {
+    "probe": "scope_narrowing",
+    "cosai": "CoSAI MCP Security v2.0, 3.3.2",
+    "grade": "FAIL",
+    "label": "scope_exceeded",
+    "reason": "upstream scope holds ['delete:all'] that the subject token lacked",
+    "target": "http://127.0.0.1:4503/mcp",
+    "controls": {
+      "broken_fixture_failed": false,
+      "subject_scope_broader_than_configured": true
+    },
+    "observations": [],
+    "per_call": [
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": null,
+        "requested_observed": false,
+        "issued_scope": null,
+        "upstream_scope": "read:notes write:notes admin delete:all",
+        "who_narrowed": "exchange request not observed",
+        "grade": "FAIL",
+        "label": "scope_exceeded",
+        "reason": "upstream scope holds ['delete:all'] that the subject token lacked",
+        "principal": "A",
+        "method": "tools/call",
+        "token": "sha256:c8d2628f6d99",
+        "subject": "alice",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": null,
+        "exchange_requested_audience": null
+      },
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": null,
+        "requested_observed": false,
+        "issued_scope": null,
+        "upstream_scope": "read:notes write:notes admin delete:all",
+        "who_narrowed": "exchange request not observed",
+        "grade": "FAIL",
+        "label": "scope_exceeded",
+        "reason": "upstream scope holds ['delete:all'] that the subject token lacked",
+        "principal": "B",
+        "method": "tools/call",
+        "token": "sha256:74ab34b4fc1a",
+        "subject": "bob",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": null,
+        "exchange_requested_audience": null
+      },
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": null,
+        "requested_observed": false,
+        "issued_scope": null,
+        "upstream_scope": "read:notes write:notes admin delete:all",
+        "who_narrowed": "exchange request not observed",
+        "grade": "FAIL",
+        "label": "scope_exceeded",
+        "reason": "upstream scope holds ['delete:all'] that the subject token lacked",
+        "principal": "A",
+        "method": "tools/call",
+        "token": "sha256:35dc6a2baf2e",
+        "subject": "alice",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": null,
+        "exchange_requested_audience": null
+      }
+    ]
+  },
+  "scope_safe": {
+    "probe": "scope_narrowing",
+    "cosai": "CoSAI MCP Security v2.0, 3.3.2",
+    "grade": "OK",
+    "label": "narrowed",
+    "reason": "narrower than the subject and equal to what the gateway requested",
+    "target": "http://127.0.0.1:4503/mcp",
+    "controls": {
+      "broken_fixture_failed": true,
+      "subject_scope_broader_than_configured": true
+    },
+    "observations": [],
+    "per_call": [
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": "read:notes",
+        "requested_observed": true,
+        "issued_scope": "read:notes",
+        "upstream_scope": "read:notes",
+        "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+        "grade": "OK",
+        "label": "narrowed",
+        "reason": "narrower than the subject and equal to what the gateway requested",
+        "principal": "A",
+        "method": "tools/call",
+        "token": "sha256:f9e6856fce53",
+        "subject": "alice",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": true,
+        "exchange_requested_audience": "https://upstream.test/mcp"
+      },
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": "read:notes",
+        "requested_observed": true,
+        "issued_scope": "read:notes",
+        "upstream_scope": "read:notes",
+        "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+        "grade": "OK",
+        "label": "narrowed",
+        "reason": "narrower than the subject and equal to what the gateway requested",
+        "principal": "B",
+        "method": "tools/call",
+        "token": "sha256:769131fe6e0e",
+        "subject": "bob",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": true,
+        "exchange_requested_audience": "https://upstream.test/mcp"
+      },
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": "read:notes",
+        "requested_observed": true,
+        "issued_scope": "read:notes",
+        "upstream_scope": "read:notes",
+        "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+        "grade": "OK",
+        "label": "narrowed",
+        "reason": "narrower than the subject and equal to what the gateway requested",
+        "principal": "A",
+        "method": "tools/call",
+        "token": "sha256:d866de7fb8b4",
+        "subject": "alice",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": true,
+        "exchange_requested_audience": "https://upstream.test/mcp"
+      }
+    ]
+  },
+  "scope_no_request": {
+    "probe": "scope_narrowing",
+    "cosai": "CoSAI MCP Security v2.0, 3.3.2",
+    "grade": "OBSERVATION",
+    "label": "not_narrowed",
+    "reason": "the gateway requested no scope, so the subject's full scope reached the upstream",
+    "target": "http://127.0.0.1:4503/mcp",
+    "controls": {
+      "broken_fixture_failed": true,
+      "subject_scope_broader_than_configured": true
+    },
+    "observations": [],
+    "per_call": [
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": null,
+        "requested_observed": true,
+        "issued_scope": "read:notes write:notes admin",
+        "upstream_scope": "read:notes write:notes admin",
+        "who_narrowed": "gateway requested no scope; AS issued 'read:notes write:notes admin'",
+        "grade": "OBSERVATION",
+        "label": "not_narrowed",
+        "reason": "the gateway requested no scope, so the subject's full scope reached the upstream",
+        "principal": "A",
+        "method": "tools/call",
+        "token": "sha256:99ac9701fc9d",
+        "subject": "alice",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": true,
+        "exchange_requested_audience": "https://upstream.test/mcp"
+      },
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": null,
+        "requested_observed": true,
+        "issued_scope": "read:notes write:notes admin",
+        "upstream_scope": "read:notes write:notes admin",
+        "who_narrowed": "gateway requested no scope; AS issued 'read:notes write:notes admin'",
+        "grade": "OBSERVATION",
+        "label": "not_narrowed",
+        "reason": "the gateway requested no scope, so the subject's full scope reached the upstream",
+        "principal": "B",
+        "method": "tools/call",
+        "token": "sha256:2f1a7d711bb5",
+        "subject": "bob",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": true,
+        "exchange_requested_audience": "https://upstream.test/mcp"
+      },
+      {
+        "subject_scope": "read:notes write:notes admin",
+        "requested_scope": null,
+        "requested_observed": true,
+        "issued_scope": "read:notes write:notes admin",
+        "upstream_scope": "read:notes write:notes admin",
+        "who_narrowed": "gateway requested no scope; AS issued 'read:notes write:notes admin'",
+        "grade": "OBSERVATION",
+        "label": "not_narrowed",
+        "reason": "the gateway requested no scope, so the subject's full scope reached the upstream",
+        "principal": "A",
+        "method": "tools/call",
+        "token": "sha256:79d4aae0f846",
+        "subject": "alice",
+        "issuer": "https://local-as.test",
+        "exchange_actor_present": true,
+        "exchange_requested_audience": "https://upstream.test/mcp"
+      }
+    ]
+  },
+  "issuer_any": {
+    "probe": "issuer_unregistered",
+    "cosai": "CoSAI MCP Security v2.0, 3.2.2 / 3.3.2",
+    "grade": "FAIL",
+    "label": "unregistered_issuer_request_succeeded",
+    "reason": "the request with the unregistered issuer returned a successful result",
+    "target": "http://127.0.0.1:4503/mcp",
+    "controls": {
+      "broken_fixture_failed": false,
+      "control_before_reached": true,
+      "control_after_reached": true,
+      "quiet_baseline": true
+    },
+    "evidence": {
+      "probe_issuer": "https://unregistered.test",
+      "probe_token": "sha256:462d26e58256",
+      "nonces": {
+        "control_before": "st-cb-1ab844409e34",
+        "probe": "st-probe-c2940d06f884",
+        "control_after": "st-ca-34933da339ac"
+      },
+      "probe_succeeded": true,
+      "probe_error": null,
+      "probe_upstream_calls": [
+        {
+          "subject": "mallory",
+          "actor": "gateway-client",
+          "audience": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "token": "sha256:e52316f089f5",
+          "issuer": "https://unregistered.test",
+          "parsed": true,
+          "parse_error": null,
+          "method": "tools/call",
+          "nonce": "st-probe-c2940d06f884",
+          "linked": true
+        }
+      ],
+      "unattributed_calls": [],
+      "control_before_succeeded": true,
+      "control_before_calls": [
+        {
+          "subject": "mallory",
+          "actor": "gateway-client",
+          "audience": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "token": "sha256:dfec36adc1b2",
+          "issuer": "https://provx.test",
+          "parsed": true,
+          "parse_error": null,
+          "method": "tools/call",
+          "nonce": "st-cb-1ab844409e34",
+          "linked": false
+        }
+      ],
+      "control_before_error": null,
+      "control_after_succeeded": true,
+      "control_after_calls": [
+        {
+          "subject": "mallory",
+          "actor": "gateway-client",
+          "audience": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "token": "sha256:e490ed5a83ae",
+          "issuer": "https://provx.test",
+          "parsed": true,
+          "parse_error": null,
+          "method": "tools/call",
+          "nonce": "st-ca-34933da339ac",
+          "linked": false
+        }
+      ],
+      "control_after_error": null,
+      "quiet_baseline_calls": 0,
+      "quiet_seconds": 0.5,
+      "exchange_attempted_with_probe_token": true,
+      "exchange_records_for_probe_token": [
+        {
+          "time": 1794411861.597804,
+          "subject_fp": "sha256:462d26e58256",
+          "requested_scope": "read:notes",
+          "requested_audience": "https://upstream.test/mcp",
+          "actor_present": true,
+          "subject_iss": "https://unregistered.test",
+          "subject_sub": "mallory",
+          "subject_scope": "read:notes",
+          "subject_key": "lax: key chosen by kid, issuer not checked (key provx)",
+          "outcome": "granted",
+          "issued_fp": "sha256:e52316f089f5",
+          "issued_scope": "read:notes",
+          "issued_audience": "https://upstream.test/mcp",
+          "seq": 2
+        }
+      ]
+    }
+  },
+  "issuer_checked": {
+    "probe": "issuer_unregistered",
+    "cosai": "CoSAI MCP Security v2.0, 3.2.2 / 3.3.2",
+    "grade": "OK",
+    "label": "rejected",
+    "reason": "the gateway refused the unregistered issuer before any exchange, and nothing reached the upstream; the registered-issuer control did reach it",
+    "target": "http://127.0.0.1:4503/mcp",
+    "controls": {
+      "broken_fixture_failed": true,
+      "control_before_reached": true,
+      "control_after_reached": true,
+      "quiet_baseline": true
+    },
+    "evidence": {
+      "probe_issuer": "https://unregistered.test",
+      "probe_token": "sha256:9309d2cb9477",
+      "nonces": {
+        "control_before": "st-cb-11457937ce78",
+        "probe": "st-probe-84c9ebabe581",
+        "control_after": "st-ca-209e08aedb95"
+      },
+      "probe_succeeded": false,
+      "probe_error": "JSONRPCError: [-32000] untrusted issuer 'https://unregistered.test'",
+      "probe_upstream_calls": [],
+      "unattributed_calls": [],
+      "control_before_succeeded": true,
+      "control_before_calls": [
+        {
+          "subject": "mallory",
+          "actor": "gateway-client",
+          "audience": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "token": "sha256:53338514abe1",
+          "issuer": "https://provx.test",
+          "parsed": true,
+          "parse_error": null,
+          "method": "tools/call",
+          "nonce": "st-cb-11457937ce78",
+          "linked": false
+        }
+      ],
+      "control_before_error": null,
+      "control_after_succeeded": true,
+      "control_after_calls": [
+        {
+          "subject": "mallory",
+          "actor": "gateway-client",
+          "audience": "https://upstream.test/mcp",
+          "scope": "read:notes",
+          "token": "sha256:599ea21cca14",
+          "issuer": "https://provx.test",
+          "parsed": true,
+          "parse_error": null,
+          "method": "tools/call",
+          "nonce": "st-ca-209e08aedb95",
+          "linked": false
+        }
+      ],
+      "control_after_error": null,
+      "quiet_baseline_calls": 0,
+      "quiet_seconds": 0.5,
+      "exchange_attempted_with_probe_token": false,
+      "exchange_records_for_probe_token": []
+    }
+  }
+}

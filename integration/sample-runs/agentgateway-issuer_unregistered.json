@@ -1,0 +1,108 @@
+{
+  "probe": "issuer_unregistered",
+  "cosai": "CoSAI MCP Security v2.0, 3.2.2 / 3.3.2",
+  "grade": "OK",
+  "label": "rejected",
+  "reason": "the gateway refused the unregistered issuer before any exchange, and nothing reached the upstream; the registered-issuer control did reach it",
+  "target": "http://127.0.0.1:4130/mcp",
+  "controls": {
+    "broken_fixture_failed": true,
+    "control_before_reached": true,
+    "control_after_reached": true,
+    "quiet_baseline": true
+  },
+  "evidence": {
+    "probe_issuer": "https://unregistered.test",
+    "probe_token": "sha256:67e547627838",
+    "nonces": {
+      "control_before": "st-cb-ef119d5ffdbb",
+      "probe": "st-probe-363bb0876652",
+      "control_after": "st-ca-e8f50e8cefaf"
+    },
+    "probe_succeeded": false,
+    "probe_error": "HTTPTransportError: HTTP 401 from http://127.0.0.1:4130/mcp: authentication failed",
+    "probe_upstream_calls": [],
+    "unattributed_calls": [],
+    "control_before_succeeded": true,
+    "control_before_calls": [
+      {
+        "subject": "mallory",
+        "actor": "agent-client",
+        "audience": "https://upstream.test/mcp",
+        "scope": "read:notes",
+        "token": "sha256:d4416f0f275b",
+        "issuer": "https://provx.test",
+        "parsed": true,
+        "parse_error": null,
+        "method": "tools/call",
+        "nonce": "st-cb-ef119d5ffdbb",
+        "linked": false
+      }
+    ],
+    "control_before_error": null,
+    "control_after_succeeded": true,
+    "control_after_calls": [
+      {
+        "subject": "mallory",
+        "actor": "agent-client",
+        "audience": "https://upstream.test/mcp",
+        "scope": "read:notes",
+        "token": "sha256:6c9bf3afefeb",
+        "issuer": "https://provx.test",
+        "parsed": true,
+        "parse_error": null,
+        "method": "tools/call",
+        "nonce": "st-ca-e8f50e8cefaf",
+        "linked": false
+      }
+    ],
+    "control_after_error": null,
+    "quiet_baseline_calls": 0,
+    "quiet_seconds": 3,
+    "exchange_attempted_with_probe_token": false,
+    "exchange_records_for_probe_token": []
+  },
+  "gateway": "agentgateway",
+  "gateway_version": "1.7.0",
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "mode": "issuer_unregistered",
+  "gateway_config_path": "integration/agentgateway/xid10-two-issuers.yaml",
+  "gateway_config_sha256": "40252171b5be179fc9d03a5500ed3d960bd14742254f4ccb113c9d63b4235df9",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4190",
+    "agw_url": "http://127.0.0.1:4130/mcp",
+    "agw_admin_port": 4131,
+    "upstream_port": 4180,
+    "fixture_ports": [
+      4170,
+      4171
+    ]
+  },
+  "as_facts": {
+    "lax_subject_issuer": true,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "actor_source": "caller-supplied x-actor-token ('agent-client')",
+  "gateway_run_config_sha256": "9f6c5cba0da93df835a832e791817ba8e726d669d57dacb90693d9187eb6fa07",
+  "gateway_run_config": "# XID-10 gate: agentgateway as the deputy under test (RFC 8693 DELEGATION),\n# two login providers (provX, provY) that both have a user named alice.\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:4131\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 4130\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: two trusted providers, each with its OWN signing key (the local\n    # AS serves one JWKS per provider at /jwks/<name>). They are different\n    # issuers: alice@provX and alice@provY are\n    # different principals and must stay distinct through the exchange.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://provx.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:4190/jwks/provx\n      - issuer: https://provy.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:4190/jwks/provy\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:4180/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:4190\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Delegation: the calling agent presents its own client-credentials\n              # token in x-actor-token. agentgateway cannot mint an actor token\n              # itself; the source must be a request location.\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "signing_key_of_probe": "provx (trusted by jwtAuth for provx)",
+  "broken_fixture": {
+    "name": "thin_deputy issuer_any",
+    "grade": "FAIL",
+    "reason": "the request with the unregistered issuer returned a successful result"
+  },
+  "run_valid": true,
+  "run_problems": []
+}

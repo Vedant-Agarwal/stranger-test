@@ -23,33 +23,41 @@
       "actor": "forge",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:7c07401d5d37",
+      "token": "sha256:151d70f2ba0b",
       "issuer": "https://local-as.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     },
     {
       "subject": "bob",
       "actor": "forge",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:fcfff6da4470",
+      "token": "sha256:badb6c14800a",
       "issuer": "https://local-as.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     },
     {
       "subject": "alice",
       "actor": "forge",
       "audience": "https://upstream.test/mcp",
       "scope": "read:notes",
-      "token": "sha256:7c07401d5d37",
+      "token": "sha256:151d70f2ba0b",
       "issuer": "https://local-as.test",
       "parsed": true,
       "parse_error": null,
-      "method": "tools/call"
+      "method": "tools/call",
+      "nonce": null
     }
-  ]
+  ],
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4790",
+    "cf_url": "http://127.0.0.1:4744",
+    "upstream_port": 4780
+  }
 }

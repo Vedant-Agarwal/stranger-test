@@ -35,25 +35,42 @@ configured by its config file only; no source or binary changes.
 
 Everything runs on loopback. **agentgateway binds all interfaces by default**
 (gateway, stats `:15020`, readiness `:15021`), so every config here pins the
-gateway to `127.0.0.1`, the admin port to `127.0.0.1:15790`, and turns stats
+gateway to `127.0.0.1`, the admin port to `127.0.0.1` (port substituted at run time), and turns stats
 and readiness off.
 
-## 1. Local AS (IdP) on 127.0.0.1:8790
+## 1. Local AS (IdP)
 
-The same AS as the ContextForge gate. If it is not already running:
+The same AS as the ContextForge gate (one signing key per test provider at
+`/jwks/<name>`, scope capped at requested ∩ subject, exchange log at
+`/exchanges`; see `CONTEXTFORGE_GATE.md`):
 
 ```
-<venv>/bin/python -c "import sys;sys.path.insert(0,'integration');from local_as import LocalAS;s=LocalAS(issuer='https://local-as.test',key_path='<dir>/as_key.pem').serve(port=8790);s.serve_forever()"
+<venv>/bin/python integration/local_as.py serve --port 4190 --key-path <dir>/as_key.pem
+# issuer_unregistered only: add --lax-subject-issuer
 ```
+
+**Ports.** The configs in `integration/agentgateway/` name fixed ports (AS
+8790, gateway 3790, admin 15790, upstream 18790). The driver writes a
+port-substituted copy for each run from `AS_BASE`, `AGW_URL`, `AGW_ADMIN_PORT`
+and `UPSTREAM_PORT`, refuses to start unless `AS_BASE` and `AGW_URL` are set
+explicitly, and refuses ports 8790/4444 (no override). Each run records the endpoints and the sha256 of the substituted
+config (`gateway_run_config_sha256`) next to the repo config's hash.
 
 ## 2. Run the gate
 
 The driver starts agentgateway itself (on a temp copy of the config, see
-gotchas), starts the recording upstream on `127.0.0.1:18790`, runs the probe,
-and stops both.
+gotchas), starts the recording upstream on `127.0.0.1:$UPSTREAM_PORT`, runs the probe,
+and stops both. `FIXTURE_PORT` pins the in-run thin-deputy fixture (upstream
+on N, deputy on N+1).
+
+The standalone thin-deputy gate (`integration/xid10_thin_deputy_gate.py`) does
+not use `FIXTURE_PORT`: it needs `THIN_PORT_BASE=N` (AS on N, lax AS on N+1,
+upstream on N+2, deputy on N+3) and refuses to start without it. See the
+README.
 
 ```
 export AGW_BIN=<dir>/agentgateway-darwin-arm64
+export AS_BASE=http://127.0.0.1:4190 AGW_URL=http://127.0.0.1:4130/mcp AGW_ADMIN_PORT=4131 UPSTREAM_PORT=4180 FIXTURE_PORT=4170
 XID10_MODE=delegation                          <venv>/bin/python integration/xid10_agentgateway_gate.py
 XID10_MODE=impersonation                       <venv>/bin/python integration/xid10_agentgateway_gate.py
 XID10_MODE=two_issuers                         <venv>/bin/python integration/xid10_agentgateway_gate.py
@@ -67,13 +84,33 @@ XID10_MODE=broken_passthrough        <venv>/bin/python integration/xid10_agentga
 XID10_MODE=delegation_missing_actor  <venv>/bin/python integration/xid10_agentgateway_gate.py
 ```
 
+New checks (same meaning and grades as in `CONTEXTFORGE_GATE.md`):
+
+```
+XID10_MODE=scope_narrowing                        <venv>/bin/python integration/xid10_agentgateway_gate.py
+XID10_MODE=scope_narrowing XID10_GW_SCOPES=NONE   <venv>/bin/python integration/xid10_agentgateway_gate.py
+# with the AS started --lax-subject-issuer:
+XID10_MODE=issuer_unregistered                    <venv>/bin/python integration/xid10_agentgateway_gate.py
+XID10_MODE=issuer_email_crossprovider             <venv>/bin/python integration/xid10_agentgateway_gate.py
+```
+
+Where agentgateway sets the exchange scope: `backendAuth.oauthTokenExchange.scopes`;
+in v1.7.0 `crates/agentgateway/src/http/auth/oauth/transport.rs` appends
+`scope=<scopes joined by space>` only `if !spec.scopes.is_empty()`. So
+`xid10-delegation.yaml` (`scopes: [read:notes]`) requests read:notes and
+`xid10-scope-none.yaml` (no `scopes`) requests nothing. agentgateway keeps no
+user store, so `issuer_email_crossprovider` only records which identity the
+upstream saw.
+
 Configs, one per mode, in `integration/agentgateway/`:
 
 | Mode | Config | Client sends |
 |---|---|---|
 | `delegation` | `xid10-delegation.yaml` | user JWT + `x-actor-token` |
 | `impersonation` | `xid10-impersonation.yaml` (no `actorToken`) | user JWT |
-| `two_issuers` | `xid10-two-issuers.yaml` (trusts provX + provY) | user JWT + `x-actor-token` |
+| `two_issuers` | `xid10-two-issuers.yaml` (trusts provX + provY, each via its own `/jwks/<name>`) | user JWT + `x-actor-token` |
+| `scope_narrowing` | `xid10-delegation.yaml` (`XID10_GW_SCOPES=NONE`: `xid10-scope-none.yaml`) | user JWT + `x-actor-token` |
+| `issuer_unregistered`, `issuer_email_crossprovider` | `xid10-two-issuers.yaml` | user JWT + `x-actor-token` |
 | `broken_passthrough` | `xid10-broken-passthrough.yaml` (no exchange) | user JWT + `x-actor-token` |
 | `delegation_missing_actor` | `xid10-delegation.yaml` | user JWT only |
 
@@ -98,10 +135,10 @@ scenario):
 ## How it is wired
 
 ```
-client --(user JWT [+ x-actor-token])--> agentgateway 127.0.0.1:3790/mcp
+client --(user JWT [+ x-actor-token])--> agentgateway 127.0.0.1:4130/mcp
           jwtAuth: issuer + audience agentgateway-api, JWKS from the AS
 agentgateway --(RFC 8693: subject_token [+ actor_token])--> local_as /token
-agentgateway --(exchanged token, aud https://upstream.test/mcp)--> upstream :18790/mcp
+agentgateway --(exchanged token, aud https://upstream.test/mcp)--> upstream :4180/mcp
 ```
 
 `backendAuth.oauthTokenExchange` sits on the MCP target. The subject token is
@@ -138,8 +175,8 @@ jwt.rawToken.unredacted()`); `audiences` and `scopes` narrow the exchange.
   `preserveToken: true`), which is why the subject token is read with the CEL
   expression rather than the default header source.
 - **Fixed ports.** The config names the upstream port, so the upstream listens
-  on a fixed `127.0.0.1:18790` (`UPSTREAM_PORT` to change it, together with the
-  configs).
+  on a fixed port (`UPSTREAM_PORT`); the driver substitutes it into the run
+  copy of the config.
 - **Logs.** agentgateway's log is kept in memory and printed only on failure,
   with every JWT-shaped string replaced by its fingerprint.
 - **Scope:** localhost / servers you run only. The AS, the gateway and the

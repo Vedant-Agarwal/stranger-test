@@ -62,7 +62,27 @@ class CliPracticeTests(unittest.TestCase):
 
     def test_no_subcommand_prints_help(self):
         code, _ = self._run([])
-        self.assertEqual(code, 2)
+        self.assertEqual(code, 3)
+
+
+class CliHelpTests(unittest.TestCase):
+    def _help_text(self):
+        out = io.StringIO()
+        with self.assertRaises(SystemExit) as cm, redirect_stdout(out):
+            main(["--help"])
+        self.assertEqual(cm.exception.code, 0)
+        return out.getvalue()
+
+    def test_epilog_describes_gate_only_checks(self):
+        text = self._help_text()
+        # delegation/scope/issuer need both; the cache check needs only a
+        # recording upstream.
+        self.assertIn(
+            "delegation, scope and issuer checks need a login server", text
+        )
+        self.assertIn("the private-cache check needs a recording upstream", text)
+        # The old wording lumped the cache check in with a login server.
+        self.assertNotIn("private-cache checks each need a login server", text)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,108 @@
+{
+  "probe": "issuer_unregistered",
+  "cosai": "CoSAI MCP Security v2.0, 3.2.2 / 3.3.2",
+  "grade": "OK",
+  "label": "rejected",
+  "reason": "the gateway refused the unregistered issuer before any exchange, and nothing reached the upstream; the registered-issuer control did reach it",
+  "target": "http://127.0.0.1:4744/servers/a88863793c934c6a980bd8ae1b4a962f/mcp",
+  "controls": {
+    "broken_fixture_failed": true,
+    "control_before_reached": true,
+    "control_after_reached": true,
+    "quiet_baseline": true
+  },
+  "evidence": {
+    "probe_issuer": "https://unregistered.test",
+    "probe_token": "sha256:b77a95241c64",
+    "nonces": {
+      "control_before": "st-cb-958697ad605c",
+      "probe": "st-probe-20a43127d3bc",
+      "control_after": "st-ca-4a8656ea1ad6"
+    },
+    "probe_succeeded": false,
+    "probe_error": "HTTPTransportError: HTTP 401 from http://127.0.0.1:4744/servers/a88863793c934c6a980bd8ae1b4a962f/mcp: {\"detail\":\"Invalid authentication credentials\"}",
+    "probe_upstream_calls": [],
+    "unattributed_calls": [],
+    "control_before_succeeded": true,
+    "control_before_calls": [
+      {
+        "subject": "mallory",
+        "actor": "forge",
+        "audience": "https://upstream.test/mcp",
+        "scope": "read:notes",
+        "token": "sha256:348c998aff02",
+        "issuer": "https://provx.test",
+        "parsed": true,
+        "parse_error": null,
+        "method": "tools/call",
+        "nonce": "st-cb-958697ad605c",
+        "linked": false
+      }
+    ],
+    "control_before_error": null,
+    "control_after_succeeded": true,
+    "control_after_calls": [
+      {
+        "subject": "mallory",
+        "actor": "forge",
+        "audience": "https://upstream.test/mcp",
+        "scope": "read:notes",
+        "token": "sha256:348c998aff02",
+        "issuer": "https://provx.test",
+        "parsed": true,
+        "parse_error": null,
+        "method": "tools/call",
+        "nonce": "st-ca-4a8656ea1ad6",
+        "linked": false
+      }
+    ],
+    "control_after_error": null,
+    "quiet_baseline_calls": 0,
+    "quiet_seconds": 3,
+    "exchange_attempted_with_probe_token": false,
+    "exchange_records_for_probe_token": []
+  },
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "mode": "issuer_unregistered",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4790",
+    "cf_url": "http://127.0.0.1:4744",
+    "upstream_port": 4780,
+    "upstream_url": "http://127.0.0.1:4780/mcp/r1794559162",
+    "fixture_ports": [
+      4770,
+      4771
+    ]
+  },
+  "as_facts": {
+    "lax_subject_issuer": true,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "env": {
+    "SSO_API_TOKEN_AUTH_ENABLED": "true",
+    "SSO_ALLOW_PROVIDER_LINKING": null,
+    "SSRF_ALLOW_LOCALHOST": "true",
+    "MCP_CLIENT_CONNECT_MODE": "auto"
+  },
+  "sso_allow_provider_linking_default": "false (mcpgateway/config.py sso_allow_provider_linking)",
+  "signing_key_of_probe": "provx (trusted by ContextForge for provx)",
+  "gateway_config": {
+    "providers": {
+      "provx": "/jwks/provx",
+      "provy": "/jwks/provy"
+    },
+    "oauth_config_sha256": "51e4356d536c928855c740549112e54a4cb7b3b006fe47e618bd64b4412e356b"
+  },
+  "broken_fixture": {
+    "name": "thin_deputy issuer_any",
+    "grade": "FAIL",
+    "reason": "the request with the unregistered issuer returned a successful result"
+  },
+  "run_valid": true,
+  "run_problems": []
+}
