@@ -1,0 +1,68 @@
+--- tools-call-auth.sample.yaml	2026-11-14 22:12:13
++++ kuadrant-mcps-auth-policy.yaml	2026-11-14 22:28:30
+@@ -13,26 +13,13 @@
+     authentication: #validates the token
+       'keycloak':
+         jwt:
+-          issuerUrl: https://keycloak.127-0-0-1.sslip.io:8002/realms/mcp
++          issuerUrl: http://host.docker.internal:4610
+     metadata:
+-      vault:
+-        http:
+-          urlExpression: |
+-            "http://vault.vault.svc.cluster.local:8200/v1/secret/data/" + auth.identity.preferred_username + "/" + request.headers['x-mcp-servername'].replace("/", ".")
+-          method: GET
+-          credentials:
+-            customHeader:
+-              name: X-Vault-Token
+-          sharedSecretRef:
+-            name: token-exchange
+-            key: vault-token
+-        priority: 0
+       oauth-token-exchange:
+         when:
+-          - predicate: "!has(auth.metadata.vault.data) || !has(auth.metadata.vault.data.data) || !has(auth.metadata.vault.data.data.token) || type(auth.metadata.vault.data.data.token) != string"
+           - predicate: type(auth.identity.aud) != string || auth.identity.aud != request.headers['x-mcp-servername']
+         http:
+-          url: https://keycloak.127-0-0-1.sslip.io:8002/realms/mcp/protocol/openid-connect/token
++          url: http://host.docker.internal:4610/token
+           method: POST
+           credentials:
+             authorizationHeader:
+@@ -64,35 +51,17 @@
+           allValues: true
+         priority: 0
+       'scoped-audience-check':
+-        when:
+-          - predicate: "!has(auth.metadata.vault.data) || !has(auth.metadata.vault.data.data) || !has(auth.metadata.vault.data.data.token) || type(auth.metadata.vault.data.data.token) != string"
+         patternMatching:
+           patterns:
+             - predicate: has(auth.authorization.token.claims.aud) && type(auth.authorization.token.claims.aud) == string && auth.authorization.token.claims.aud == request.headers['x-mcp-servername']
+         priority: 1
+-      'tool-access-check':
+-        when:
+-          - predicate: "request.headers.exists(h, h == 'x-mcp-toolname')"
+-        patternMatching:
+-          patterns:
+-            - predicate: |
+-                ('tool:' + request.headers['x-mcp-toolname']) in (has(auth.authorization.token.claims.resource_access) && auth.authorization.token.claims.resource_access.exists(p, p == request.headers['x-mcp-servername']) ? auth.authorization.token.claims.resource_access[request.headers['x-mcp-servername']].roles : [])
+-        priority: 1
+-      'prompt-access-check':
+-        when:
+-          - predicate: "request.headers.exists(h, h == 'x-mcp-promptname')"
+-        patternMatching:
+-          patterns:
+-            - predicate: |
+-                ('prompt:' + request.headers['x-mcp-promptname']) in (has(auth.authorization.token.claims.resource_access) && auth.authorization.token.claims.resource_access.exists(p, p == request.headers['x-mcp-servername']) ? auth.authorization.token.claims.resource_access[request.headers['x-mcp-servername']].roles : [])
+-        priority: 1
+     response:
+       success:
+         headers:
+           authorization:
+             plain:
+               expression: |
+-                "Bearer " + ((has(auth.metadata.vault.data) && has(auth.metadata.vault.data.data) && has(auth.metadata.vault.data.data.token) && type(auth.metadata.vault.data.data.token) == string) ? auth.metadata.vault.data.data.token : auth.authorization.token.jwt)
++                "Bearer " + auth.authorization.token.jwt
+       unauthenticated:
+         headers:
+           'WWW-Authenticate':

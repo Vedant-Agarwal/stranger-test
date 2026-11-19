@@ -1,0 +1,815 @@
+{
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "deeper_mode": "login_faults",
+  "gateway_config": {
+    "oauth_config": {
+      "grant_type": "token-exchange",
+      "token_url": "http://127.0.0.1:4675/token",
+      "target_audience": "https://upstream.test/mcp",
+      "subject_token_source": "inbound_user_jwt",
+      "client_id": "forge",
+      "token_endpoint_auth_method": "client_secret_post",
+      "scopes": [
+        "read:notes"
+      ],
+      "actor_token_source": "client_credentials"
+    },
+    "oauth_config_sha256": "7e4a9cd368a1e2a355e2114fae79dd8aaa7c05e549bb60e2b7ff462bb509ca5f"
+  },
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4690",
+    "cf_url": "http://127.0.0.1:4644",
+    "upstream_port": 4683,
+    "fault_port": 4675,
+    "fixture_ports": [
+      4660,
+      4663
+    ]
+  },
+  "env": {
+    "SSO_ENABLED": "true",
+    "SSO_API_TOKEN_AUTH_ENABLED": "true",
+    "SSRF_ALLOW_LOCALHOST": "true",
+    "MCP_CLIENT_CONNECT_MODE": "auto",
+    "RATE_LIMIT_MEDIUM_RPM": null,
+    "RATE_LIMIT_MEDIUM_BURST": null
+  },
+  "login_server": {
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested",
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [
+      "agent-client",
+      "other-agent"
+    ]
+  },
+  "authorization_note": "external users granted tools.execute via a team-scoped developer role (not admin)",
+  "probe": "login_faults",
+  "modes": {
+    "http_500": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-http_500-ed0e48d227eb",
+        "probe": "st-probe-http_500-b3c84b798676",
+        "fx_ctl": "st-fx_ctl-http_500-d114a8573286",
+        "fx_probe": "st-fx_probe-http_500-816ab51133f3"
+      },
+      "control": {
+        "user": "lf-ctl-http_500",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"text\": \"ok\", \"type\": \"text\"}], \"isError\": false}",
+          "elapsed_s": 0.37
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-http_500-ed0e48d227eb",
+            "token": "sha256:750bb8b824b8",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-http_500",
+            "issuer": "https://local-as.test",
+            "actor": "forge",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-http_500",
+        "caller": {
+          "succeeded": false,
+          "detail": "{\"content\": [{\"text\": \"Tool invocation failed: Token exchange failed for gateway 'xid10-1794635707'. Contact your administrator.\", \"type\": \"text\"}], \"isError\": true}",
+          "elapsed_s": 3.25
+        },
+        "caller_elapsed_s": 3.25,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 3,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.05
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.0
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-http_500-816ab51133f3",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "unreachable": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first (attempts not observable: nothing was listening)",
+      "nonces": {
+        "ctl": "st-ctl-unreachable-84f3ea50c660",
+        "probe": "st-probe-unreachable-e7a03e4fc717",
+        "fx_ctl": "st-fx_ctl-unreachable-8c9011fe3a4c",
+        "fx_probe": "st-fx_probe-unreachable-3ec24078d770"
+      },
+      "control": {
+        "user": "lf-ctl-unreachable",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"text\": \"ok\", \"type\": \"text\"}], \"isError\": false}",
+          "elapsed_s": 0.28
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-unreachable-84f3ea50c660",
+            "token": "sha256:fce070d6ac10",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-unreachable",
+            "issuer": "https://local-as.test",
+            "actor": "forge",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-unreachable",
+        "caller": {
+          "succeeded": false,
+          "detail": "{\"content\": [{\"text\": \"Tool invocation failed: Token exchange failed for gateway 'xid10-1794635707'. Contact your administrator.\", \"type\": \"text\"}], \"isError\": true}",
+          "elapsed_s": 3.29
+        },
+        "caller_elapsed_s": 3.29,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": null,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.05
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.01
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-unreachable-3ec24078d770",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "slow": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-slow-8c402fe12883",
+        "probe": "st-probe-slow-a8aeac037cee",
+        "fx_ctl": "st-fx_ctl-slow-c986c1e7192c",
+        "fx_probe": "st-fx_probe-slow-21bce133c61f"
+      },
+      "control": {
+        "user": "lf-ctl-slow",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"text\": \"ok\", \"type\": \"text\"}], \"isError\": false}",
+          "elapsed_s": 0.29
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-slow-8c402fe12883",
+            "token": "sha256:095ec3f54c46",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-slow",
+            "issuer": "https://local-as.test",
+            "actor": "forge",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-slow",
+        "caller": {
+          "succeeded": false,
+          "detail": "{\"content\": [{\"text\": \"Tool invocation failed: Token exchange failed for gateway 'xid10-1794635707'. Contact your administrator.\", \"type\": \"text\"}], \"isError\": true}",
+          "elapsed_s": 93.28
+        },
+        "caller_elapsed_s": 93.28,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 3,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.03
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 10.01
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-slow-21bce133c61f",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "malformed_not_json": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-malformed_not_json-32bbe3601a53",
+        "probe": "st-probe-malformed_not_json-eda6fe41d467",
+        "fx_ctl": "st-fx_ctl-malformed_not_json-b4b6b9486b47",
+        "fx_probe": "st-fx_probe-malformed_not_json-3ef30afa3b0a"
+      },
+      "control": {
+        "user": "lf-ctl-malformed_not_json",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"text\": \"ok\", \"type\": \"text\"}], \"isError\": false}",
+          "elapsed_s": 0.31
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-malformed_not_json-32bbe3601a53",
+            "token": "sha256:ba9c2bb8c4c5",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-malformed_not_json",
+            "issuer": "https://local-as.test",
+            "actor": "forge",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-malformed_not_json",
+        "caller": {
+          "succeeded": false,
+          "detail": "{\"content\": [{\"text\": \"Tool invocation failed: Token exchange failed for gateway 'xid10-1794635707'. Contact your administrator.\", \"type\": \"text\"}], \"isError\": true}",
+          "elapsed_s": 0.22
+        },
+        "caller_elapsed_s": 0.22,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 1,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.04
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.0
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-malformed_not_json-3ef30afa3b0a",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "malformed_no_token": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-malformed_no_token-10634508024b",
+        "probe": "st-probe-malformed_no_token-7e3a3d19ceb6",
+        "fx_ctl": "st-fx_ctl-malformed_no_token-fe25d682b4ac",
+        "fx_probe": "st-fx_probe-malformed_no_token-cfe9b9411397"
+      },
+      "control": {
+        "user": "lf-ctl-malformed_no_token",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"text\": \"ok\", \"type\": \"text\"}], \"isError\": false}",
+          "elapsed_s": 0.28
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-malformed_no_token-10634508024b",
+            "token": "sha256:fc1f75dae203",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-malformed_no_token",
+            "issuer": "https://local-as.test",
+            "actor": "forge",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-malformed_no_token",
+        "caller": {
+          "succeeded": false,
+          "detail": "{\"content\": [{\"text\": \"Tool invocation failed: Token exchange failed for gateway 'xid10-1794635707'. Contact your administrator.\", \"type\": \"text\"}], \"isError\": true}",
+          "elapsed_s": 0.2
+        },
+        "caller_elapsed_s": 0.2,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 1,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.05
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.0
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-malformed_no_token-cfe9b9411397",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    }
+  },
+  "grade": "OK",
+  "token_endpoint_requests": [
+    {
+      "state": "forward",
+      "grant_type": "client_credentials",
+      "param_names": [
+        "client_id",
+        "client_secret",
+        "grant_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "http_500",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "http_500",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "http_500",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "http_500",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "slow",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": "delivered",
+      "reply": null
+    },
+    {
+      "state": "slow",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": "delivered",
+      "reply": null
+    },
+    {
+      "state": "slow",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": "delivered",
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "slow",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": "delivered",
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_not_json",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_not_json",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_no_token",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "client_id",
+        "client_secret",
+        "grant_type",
+        "requested_token_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_no_token",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    }
+  ],
+  "slow_seconds": 45.0,
+  "caller_timeout_s": 200,
+  "gateway_token_endpoint_timeout": "30 s per request, up to 3 attempts (mcpgateway/services/oauth_manager.py request_timeout=30, max_retries=3)",
+  "users": "fresh user per control and per probe, per mode (no cached exchange)",
+  "virtual_server": "http://127.0.0.1:4644/servers/1bad9772a54441b7afd11b43eef319bf/mcp"
+}

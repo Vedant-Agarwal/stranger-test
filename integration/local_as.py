@@ -36,6 +36,22 @@ issuer as long as its signature verifies under one of this AS's keys (picked by
 unregistered issuer through is not masked by the AS refusing the exchange —
 the probe then observes the gateway's decision, not the AS's.
 
+Client authentication (token-exchange grant only; opt-in). ``clients`` registers
+``client_id -> client_secret`` pairs. Every exchange record says whether client
+credentials arrived (``client_auth_method``: ``client_secret_basic``,
+``client_secret_post``, ``client_id_only``, ``multiple`` or None), which
+``client_id`` was presented, and whether the credentials were valid
+(``client_valid``: True/False, or None when no clients are registered, so nothing
+was checked). The secret is never logged. ``client_auth`` decides what is
+refused: ``none`` (default: nothing, exactly the old behaviour), ``optional``
+(credentials that arrive must be valid) or ``strict`` (valid credentials are
+required). A refusal is HTTP 401 ``invalid_client``.
+
+``act_from_client`` (opt-in, default False): when an exchange carries VALID client
+credentials and NO actor_token, the issued token gets ``act: {"sub": client_id}``
+-- the actor is the authenticated gateway. Recorded per exchange as
+``act_source`` (``actor_token`` / ``client_auth`` / None).
+
 Needs pyjwt[crypto] to run. Run ``python integration/local_as.py`` for a
 self-test, or ``python integration/local_as.py serve --port N`` to serve.
 """
@@ -135,6 +151,59 @@ def select_subject_key(
     return None, f"lax: unknown kid {kid!r}"
 
 
+CLIENT_AUTH_MODES = ("none", "optional", "strict")
+
+
+class ClientAuthError(ValueError):
+    """The token endpoint refuses the client (HTTP 401 ``invalid_client``)."""
+
+
+def parse_client_auth(params: Dict[str, str], authorization: Optional[str]
+                      ) -> Tuple[Optional[str], Optional[str], Optional[str]]:
+    """``(method, client_id, client_secret)`` from a token request (RFC 6749 2.3.1).
+
+    ``client_secret_basic``: ``Authorization: Basic base64(urlenc(id):urlenc(secret))``.
+    ``client_secret_post``: ``client_id`` + ``client_secret`` form parameters.
+    ``client_id_only``: a ``client_id`` parameter and no secret anywhere.
+    ``multiple``: Basic AND a ``client_secret`` parameter (RFC 6749 forbids
+    more than one method). ``(None, None, None)``: no client credentials.
+    A malformed Basic header is reported as ``client_secret_basic`` with no id.
+    """
+    import base64
+    from urllib.parse import unquote_plus
+    basic = None
+    if authorization and authorization[:6].lower() == "basic ":
+        try:
+            raw = base64.b64decode(authorization[6:].strip(), validate=True).decode()
+            cid, sep, sec = raw.partition(":")
+            basic = (unquote_plus(cid), unquote_plus(sec)) if sep else (None, None)
+        except Exception:
+            basic = (None, None)
+    post_id, post_secret = params.get("client_id"), params.get("client_secret")
+    if basic is not None and post_secret is not None:
+        return "multiple", basic[0] or post_id, None
+    if basic is not None:
+        return "client_secret_basic", basic[0], basic[1]
+    if post_secret is not None:
+        return "client_secret_post", post_id, post_secret
+    if post_id:
+        return "client_id_only", post_id, None
+    return None, None, None
+
+
+def check_client(method: Optional[str], client_id: Optional[str], secret: Optional[str],
+                 clients: Dict[str, str]) -> Optional[bool]:
+    """True/False whether the presented credentials are a registered pair;
+    None when no clients are registered (nothing checked)."""
+    if not clients:
+        return None
+    if method not in ("client_secret_basic", "client_secret_post"):
+        return False
+    import hmac
+    want = clients.get(client_id or "")
+    return want is not None and secret is not None and hmac.compare_digest(want, secret)
+
+
 class _Key:
     """One RSA signing key with a deterministic kid."""
 
@@ -169,7 +238,19 @@ class LocalAS:
     def __init__(self, issuer: str = "https://local-as.test", ttl: int = 3600,
                  key_path: Optional[str] = None,
                  providers: Optional[Dict[str, str]] = None,
-                 lax_subject_issuer: bool = False):
+                 lax_subject_issuer: bool = False,
+                 clients: Optional[Dict[str, str]] = None,
+                 client_auth: str = "none",
+                 act_from_client: bool = False):
+        if client_auth not in CLIENT_AUTH_MODES:
+            raise ValueError(f"client_auth must be one of {CLIENT_AUTH_MODES}")
+        if client_auth != "none" and not clients:
+            raise ValueError("client_auth optional/strict needs registered clients")
+        if act_from_client and not clients:
+            raise ValueError("act_from_client needs registered clients")
+        self.clients: Dict[str, str] = dict(clients or {})
+        self.client_auth = client_auth
+        self.act_from_client = act_from_client
         self.issuer = issuer
         self.ttl = ttl
         self.lax_subject_issuer = lax_subject_issuer
@@ -254,7 +335,9 @@ class LocalAS:
                          email: Optional[str] = None,
                          issuer: Optional[str] = None,
                          signing_key: Optional[str] = None,
-                         act: Optional[str] = None) -> str:
+                         act: Optional[str] = None,
+                         may_act: Optional[Dict[str, Any]] = None,
+                         resource_access: Optional[Dict[str, Any]] = None) -> str:
         """A user's access token — the subject_token a deputy would exchange.
 
         Carries an ``email`` claim: gateways (e.g. ContextForge) provision the
@@ -269,12 +352,29 @@ class LocalAS:
                                   "email": email or f"{sub}@local-as.test"}
         if act:
             claims["act"] = {"sub": act}
+        if may_act:
+            # RFC 8693 4.4: who may act for this subject (opt-in, test harness).
+            claims["may_act"] = dict(may_act)
+        if resource_access:
+            # Keycloak-style per-client roles claim (opt-in, test harness): lets a
+            # gate reproduce a sample policy that checks resource_access[...].roles.
+            claims["resource_access"] = dict(resource_access)
         key_name = signing_key or self._key_name_for_issuer(issuer)
         return self._sign(claims, issuer=issuer, key_name=key_name)
 
-    def issue_client_token(self, client_id: str) -> str:
-        """A client-credentials token identifying the acting gateway (actor_token)."""
-        return self._sign({"sub": client_id, "scope": "act"})
+    def issue_client_token(self, client_id: str, *, ttl: Optional[int] = None,
+                           audience: Optional[str] = None) -> str:
+        """A client-credentials token identifying the acting gateway (actor_token).
+
+        ``ttl`` (seconds, may be negative: already expired) and ``audience``
+        are for the actor-token checks only; the defaults are unchanged."""
+        claims: Dict[str, Any] = {"sub": client_id, "scope": "act"}
+        if audience is not None:
+            claims["aud"] = audience
+        if ttl is None:
+            return self._sign(claims)
+        now = int(time.time())
+        return self._sign({**claims, "iat": now - max(0, -ttl) - 60, "exp": now + ttl})
 
     def client_credentials(self, params: Dict[str, str]) -> Dict[str, Any]:
         """Issue a client-credentials token (the gateway's actor token in delegation)."""
@@ -283,12 +383,13 @@ class LocalAS:
         return {"access_token": token, "token_type": "Bearer", "expires_in": self.ttl,
                 "issued_token_type": ACCESS_TOKEN_TYPE}
 
-    def token(self, params: Dict[str, str]) -> Dict[str, Any]:
-        """Dispatch the /token endpoint by grant_type."""
+    def token(self, params: Dict[str, str], authorization: Optional[str] = None) -> Dict[str, Any]:
+        """Dispatch the /token endpoint by grant_type. ``authorization`` is the
+        request's Authorization header (client_secret_basic)."""
         grant = params.get("grant_type")
         if grant == "client_credentials":
             return self.client_credentials(params)
-        return self.token_exchange(params)
+        return self.token_exchange(params, authorization=authorization)
 
     def _record(self, rec: Dict[str, Any]) -> None:
         with self._lock:
@@ -303,7 +404,8 @@ class LocalAS:
                     return dict(r)
         return None
 
-    def token_exchange(self, params: Dict[str, str]) -> Dict[str, Any]:
+    def token_exchange(self, params: Dict[str, str],
+                       authorization: Optional[str] = None) -> Dict[str, Any]:
         """Perform an RFC 8693 token exchange and return the token response dict."""
         if params.get("grant_type") != TOKEN_EXCHANGE_GRANT:
             raise ValueError("unsupported_grant_type")
@@ -316,8 +418,18 @@ class LocalAS:
             "requested_scope": params.get("scope"),
             "requested_audience": params.get("audience"),
             "actor_present": bool(params.get("actor_token")),
+            "actor_fp": token_fingerprint(params.get("actor_token")),
         }
+        method, client_id, secret = parse_client_auth(params, authorization)
+        valid = check_client(method, client_id, secret, self.clients)
+        rec.update(client_auth_method=method, client_id=client_id, client_valid=valid,
+                   client_auth_mode=self.client_auth)
+        del secret  # never recorded
         try:
+            if self.client_auth == "strict" and valid is not True:
+                raise ClientAuthError("invalid_client: valid client credentials required")
+            if self.client_auth == "optional" and method is not None and valid is not True:
+                raise ClientAuthError("invalid_client: client credentials not valid")
             if not subject_token:
                 raise ValueError("invalid_request: subject_token required")
             subject, how = self.validate_subject(subject_token)
@@ -327,11 +439,28 @@ class LocalAS:
             actor_token = params.get("actor_token")
             act: Optional[Dict[str, Any]] = None
             if actor_token:
-                actor = self.validate(actor_token)
+                try:
+                    actor = self.validate(actor_token)
+                except Exception as exc:
+                    rec["actor_check"] = f"refused: {type(exc).__name__}"
+                    raise ValueError(f"invalid_grant: actor_token {type(exc).__name__}") from exc
+                # What this AS checks on an actor token: its own signature, its
+                # own issuer, expiry. NOT the audience (recorded per exchange).
+                rec.update(actor_check="signature+issuer+expiry (audience not checked)",
+                           actor_sub=actor.get("sub"), actor_aud=actor.get("aud"))
                 act = {"sub": actor.get("sub")}
                 # Preserve any delegation chain the subject already carried.
                 if isinstance(subject.get("act"), dict):
                     act["act"] = subject["act"]
+                rec["act_source"] = "actor_token"
+            elif self.act_from_client and valid is True:
+                # The authenticated client (the gateway) is the actor.
+                act = {"sub": client_id}
+                if isinstance(subject.get("act"), dict):
+                    act["act"] = subject["act"]
+                rec["act_source"] = "client_auth"
+            else:
+                rec["act_source"] = None
 
             audience = params.get("audience") or self.issuer
             # Never grant more than the subject has: requested ∩ subject, or the
@@ -412,12 +541,30 @@ class LocalAS:
                     email = q.get("email", [None])[0]
                     key = q.get("key", [None])[0]
                     act = q.get("act", [None])[0]
+                    may_act_raw = q.get("may_act", [None])[0]
+                    ra_raw = q.get("ra", [None])[0]
+                    try:
+                        may_act = json.loads(may_act_raw) if may_act_raw else None
+                        resource_access = json.loads(ra_raw) if ra_raw else None
+                    except ValueError:
+                        self._json(400, {"error": "may_act/ra must be JSON"})
+                        return
                     if key is not None and key not in as_._keys:
                         self._json(400, {"error": "unknown_key"})
                         return
                     self._json(200, {"access_token": as_.issue_user_token(
                         sub, scope=scope, audience=aud, issuer=iss, email=email,
-                        signing_key=key, act=act)})
+                        signing_key=key, act=act, may_act=may_act,
+                        resource_access=resource_access)})
+                elif path == "/issue-client":
+                    # DEV ONLY: mint an actor (client) token with a chosen client
+                    # id, lifetime (negative = expired) and audience.
+                    q = parse_qs(parsed.query)
+                    ttl = q.get("ttl", [None])[0]
+                    self._json(200, {"access_token": as_.issue_client_token(
+                        q.get("client_id", ["client"])[0],
+                        ttl=int(ttl) if ttl is not None else None,
+                        audience=q.get("aud", [None])[0])})
                 elif self.path.rstrip("/") == "/.well-known/openid-configuration":
                     base = f"http://{self.headers.get('Host', host)}"
                     self._json(200, {
@@ -427,6 +574,9 @@ class LocalAS:
                         "grant_types_supported": [TOKEN_EXCHANGE_GRANT],
                         # test-harness facts the gates record in each run
                         "x_lax_subject_issuer": as_.lax_subject_issuer,
+                        "x_client_auth": as_.client_auth,
+                        "x_act_from_client": as_.act_from_client,
+                        "x_clients": sorted(as_.clients),  # ids only, never secrets
                         "x_providers": as_.providers,
                         "x_scope_cap": "requested ∩ subject; subject's scope if none requested",
                     })
@@ -449,7 +599,9 @@ class LocalAS:
                 raw = self.rfile.read(length).decode()
                 params = {k: v[0] for k, v in parse_qs(raw).items()}
                 try:
-                    self._json(200, as_.token(params))
+                    self._json(200, as_.token(params, self.headers.get("Authorization")))
+                except ClientAuthError as exc:
+                    self._json(401, {"error": "invalid_client", "detail": str(exc)})
                 except Exception as exc:
                     self._json(400, {"error": "invalid_request", "detail": str(exc)})
 
@@ -534,7 +686,7 @@ def _selftest() -> None:
           " + scope cap + per-issuer keys")
 
 
-FORBIDDEN_PORTS = {8790, 4444}
+FORBIDDEN_PORTS = {8790, 4444, 4000}
 
 
 def _serve_main(argv: List[str]) -> None:
@@ -544,12 +696,26 @@ def _serve_main(argv: List[str]) -> None:
     ap.add_argument("--key-path", default=None)
     ap.add_argument("--issuer", default="https://local-as.test")
     ap.add_argument("--lax-subject-issuer", action="store_true")
+    ap.add_argument("--client", action="append", default=[], metavar="ID:SECRET",
+                    help="register a client for token-exchange client auth (repeatable)")
+    ap.add_argument("--client-auth", choices=CLIENT_AUTH_MODES, default="none")
+    ap.add_argument("--act-from-client", action="store_true",
+                    help="valid client credentials and no actor_token -> act={sub: client_id}")
     a = ap.parse_args(argv)
     if a.port in FORBIDDEN_PORTS:
         raise SystemExit(f"ERROR: refusing reserved port {a.port}")
-    as_ = LocalAS(issuer=a.issuer, key_path=a.key_path, lax_subject_issuer=a.lax_subject_issuer)
+    clients = {}
+    for spec in a.client:
+        cid, sep, sec = spec.partition(":")
+        if not sep or not cid or not sec:
+            raise SystemExit(f"ERROR: --client wants ID:SECRET, got {cid!r}:...")
+        clients[cid] = sec
+    as_ = LocalAS(issuer=a.issuer, key_path=a.key_path, lax_subject_issuer=a.lax_subject_issuer,
+                  clients=clients, client_auth=a.client_auth, act_from_client=a.act_from_client)
     srv = as_.serve(port=a.port)
-    print(f"local_as on 127.0.0.1:{a.port} lax_subject_issuer={a.lax_subject_issuer}", flush=True)
+    print(f"local_as on 127.0.0.1:{a.port} lax_subject_issuer={a.lax_subject_issuer} "
+          f"client_auth={a.client_auth} act_from_client={a.act_from_client} "
+          f"clients={sorted(clients)}", flush=True)
     srv.serve_forever()
 
 

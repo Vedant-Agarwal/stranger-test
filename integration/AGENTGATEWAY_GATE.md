@@ -181,3 +181,13 @@ jwt.rawToken.unredacted()`); `audiences` and `scopes` narrow the exchange.
   with every JWT-shaped string replaced by its fingerprint.
 - **Scope:** localhost / servers you run only. The AS, the gateway and the
   upstream are all local and disposable.
+
+## Login server in `act_from_client` mode
+
+`local_as.py serve` can register clients (`--client ID:SECRET`) and derive the
+actor from the gateway's client authentication (`--act-from-client`; see
+`integration/LITELLM_GATE.md`). Every run of this gate records the AS mode
+(`login_server`) and, per exchange, the client authentication the AS saw
+(`exchanges_client_auth`; never a secret). Runs made with `act_from_client`
+are saved as `agentgateway-<mode>-act_from_client-<ts>.json` and are kept out of
+the scenario tables; the rule table shows them next to the default result.

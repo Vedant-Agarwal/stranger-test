@@ -58,6 +58,7 @@ from strangertest.delegate import (MockUpstream, grade_issuer_email_crossprovide
                                    observe_one_call, run_delegation_probe,
                                    run_issuer_unregistered_probe, run_scope_narrowing_probe,
                                    gate_run_problems, request_nonce)
+from strangertest.concurrency import InflightMixin
 from strangertest.mcp_client import MCPClient
 from strangertest.probe import Identity, ProbeError
 from strangertest.transports import HTTPTransport
@@ -73,12 +74,18 @@ def jlog(label, obj):
 
 
 # ---------------------------------------------------------------- upstream
-class Upstream(MockUpstream):
+class Upstream(InflightMixin, MockUpstream):
     """Modern-JSON MCP upstream: answers server/discover + tools/list +
-    tools/call + resources/read, validating each bearer against local_as JWKS."""
+    tools/call + resources/read, validating each bearer against local_as JWKS.
+
+    Off by default (existing modes unchanged): ``notes`` {(issuer, subject):
+    text} answers a tools/call with the note of the token's identity, and
+    ``hold_seconds`` holds graded calls so overlap shows in ``max_inflight``."""
 
     def __init__(self, audience, jwks, issuer):
-        super().__init__(audience)
+        MockUpstream.__init__(self, audience)
+        self._inflight_init()
+        self.notes = {}
         self._iss = issuer
         self._key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwks["keys"][0]))
         self.emails = {}  # token fingerprint -> email claim
@@ -143,9 +150,14 @@ class Upstream(MockUpstream):
                         **_RESULT}})
                     return
                 if m == "tools/call":
-                    outer._rec(m, bearer, msg.get("params"))
+                    outer.enter()
+                    try:
+                        who = outer._rec(m, bearer, msg.get("params"))
+                    finally:
+                        outer.leave()
+                    text = "ok" if not outer.notes else f"note={outer.notes.get(who, 'no-note')}"
                     self._send({"jsonrpc": "2.0", "id": mid, "result": {
-                        "content": [{"type": "text", "text": "ok"}], "isError": False, **_RESULT}})
+                        "content": [{"type": "text", "text": text}], "isError": False, **_RESULT}})
                     return
                 self._send({"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": "no"}})
 
@@ -164,7 +176,7 @@ class Upstream(MockUpstream):
         except Exception as e:
             self.receive(token=bearer, parsed=False, parse_error=str(e), method=method,
                          nonce=nonce)
-            return
+            return None
         act = c.get("act")
         # Side record (not part of UpstreamCall): the email claim per token.
         self.emails[_fp(bearer)] = c.get("email")
@@ -176,6 +188,7 @@ class Upstream(MockUpstream):
                      audience=c.get("aud"), scope=c.get("scope"), token=bearer,
                      issuer=c.get("orig_iss") or c.get("iss"), parsed=True, method=method,
                      nonce=nonce)
+        return (c.get("orig_iss") or c.get("iss"), c.get("sub"))
 
     @property
     def url(self):
@@ -415,7 +428,7 @@ def wait_for_auth(as_: LocalAS, timeout=75):
 AS_BASE = os.environ.get("AS_BASE", "http://127.0.0.1:8790")
 UPSTREAM_PORT = int(os.environ.get("UPSTREAM_PORT", "0"))
 # Ports that belong to other people's processes: never use them unless told to.
-FORBIDDEN_PORTS = {8790, 4444}
+FORBIDDEN_PORTS = {8790, 4444, 4000}
 
 
 def _port_ok(port):
@@ -599,6 +612,7 @@ def main():
         # The exchange carries the end user's ORIGINAL issuer (orig_iss), so
         # identity is graded on (orig_iss, subject): a gateway conflating two
         # same-named users from different providers would be caught.
+        n_ex_before = len(as_exchanges())
         report = run_delegation_probe(
             vs_url, ident(la, sa, ia, ea), ident(lb, sb, ib, eb),
             upstream=up, trigger=trigger,
@@ -613,7 +627,10 @@ def main():
         cf_ver = (ver or {}).get("app", {}).get("version") if isinstance(ver, dict) else None
         runs_dir = os.path.join(_HERE, "runs")
         os.makedirs(runs_dir, exist_ok=True)
-        out = os.path.join(runs_dir, f"contextforge-{mode}-{int(time.time())}.json")
+        login = as_facts()
+        afc = bool(login.get("act_from_client"))
+        tag = "-act_from_client" if afc else ""
+        out = os.path.join(runs_dir, f"contextforge-{mode}{tag}-{int(time.time())}.json")
         # Redact bearer tokens to a short fingerprint — never persist full JWTs.
         import hashlib
         def _fp(t):
@@ -635,6 +652,10 @@ def main():
                     and report.calls[0].get("token") == report.calls[2].get("token")),
                 "recorded_calls": redacted_calls,
                 "endpoints": endpoints,
+                # The login server's mode and, per exchange of the probe, the
+                # client authentication it saw (no secrets).
+                "login_server": login, "as_act_from_client": afc,
+                "exchanges_client_auth": exchange_client_auth(n_ex_before),
             }, f, indent=2)
         print(f"saved run -> {out}")
     finally:
@@ -657,11 +678,13 @@ def _gw_scopes():
     return [] if raw.strip().upper() == "NONE" else raw.split()
 
 
-def setup_cf_gateway(up, tok, scopes, delegation_actor=True):
+def setup_cf_gateway(up, tok, scopes, delegation_actor=True, token_url=None):
     """Register the upstream as an oauth token-exchange gateway, discover its
-    tool, expose it on a virtual server. Returns (vs_url, tool_name, oauth_config)."""
+    tool, expose it on a virtual server. Returns (vs_url, tool_name, oauth_config).
+    ``token_url`` (default: the AS) is the exchange's token endpoint; discovery
+    always uses the AS."""
     oauth_config = {
-        "grant_type": "token-exchange", "token_url": f"{AS_BASE}/token",
+        "grant_type": "token-exchange", "token_url": token_url or f"{AS_BASE}/token",
         "target_audience": UPSTREAM_AUD, "subject_token_source": "inbound_user_jwt",
         "client_id": "forge", "client_secret": "unused",
         "token_endpoint_auth_method": "client_secret_post",
@@ -740,7 +763,20 @@ def as_facts():
     with urllib.request.urlopen(f"{AS_BASE}/.well-known/openid-configuration", timeout=10) as r:
         d = json.loads(r.read())
     return {"lax_subject_issuer": d.get("x_lax_subject_issuer"),
-            "providers": d.get("x_providers"), "scope_cap": d.get("x_scope_cap")}
+            "providers": d.get("x_providers"), "scope_cap": d.get("x_scope_cap"),
+            # Client authentication on the exchange (absent on an older local_as).
+            "client_auth": d.get("x_client_auth"), "act_from_client": d.get("x_act_from_client"),
+            "clients": d.get("x_clients")}
+
+
+_EX_CLIENT_KEYS = ("seq", "subject_sub", "actor_present", "client_auth_method", "client_id",
+                   "client_valid", "act_source", "outcome")
+
+
+def exchange_client_auth(since):
+    """Per exchange since index ``since``: did client credentials arrive, by
+    which method, were they valid, where did ``act`` come from. Never a secret."""
+    return [{k: r.get(k) for k in _EX_CLIENT_KEYS} for r in as_exchanges()[since:]]
 
 
 def as_exchanges():

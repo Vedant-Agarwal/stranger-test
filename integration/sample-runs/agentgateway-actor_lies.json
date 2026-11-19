@@ -1,0 +1,185 @@
+{
+  "gateway": "agentgateway",
+  "gateway_version": "1.7.0",
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "deeper_mode": "actor_lies",
+  "gateway_config_path": "integration/agentgateway/xid10-delegation.yaml",
+  "gateway_config_sha256": "432bd9050560b95efd91e1416e938f4158b13942e393d142ac195aae1a41fdc1",
+  "gateway_run_config": "# XID-10 gate: agentgateway as the deputy under test (RFC 8693 DELEGATION).\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:4631\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 4630\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: only users of the local AS, audience agentgateway-api.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:4690/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:4682/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:4690\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Delegation: the calling agent presents its own client-credentials\n              # token in x-actor-token. agentgateway cannot mint an actor token\n              # itself; the source must be a request location.\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4690",
+    "agw_url": "http://127.0.0.1:4630/mcp",
+    "agw_admin_port": 4631,
+    "upstream_port": 4682,
+    "fault_port": 4676,
+    "fixture_ports": [
+      4677,
+      4680
+    ]
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [
+      "agent-client",
+      "other-agent"
+    ],
+    "lax_subject_issuer": false
+  },
+  "probe": "actor_lies",
+  "grade": "OBSERVATION",
+  "label": "actor_validation_observed",
+  "control_reached_upstream_with_actor": true,
+  "note": "Not graded: agentgateway may intend the login server to validate the actor token. The local login server checks an actor token's signature, issuer and expiry, NOT its audience; so an arrival upstream in other_audience shows only that neither agentgateway nor this login server checked it.",
+  "config_actor_check": "none (actorToken.enforceMayAct not set; default false)",
+  "cases": {
+    "control": {
+      "what_was_sent": "a valid actor token for the calling agent (agent-client), audience = the login server",
+      "sent": {
+        "user": "al-control",
+        "user_token": "sha256:bb4bf3c78f64",
+        "subject_may_act": null,
+        "actor_token": "sha256:a25691f7f408",
+        "actor_client_id": "agent-client",
+        "actor_audience": "https://local-as.test",
+        "actor_ttl": "default (3600 s)"
+      },
+      "caller": {
+        "succeeded": true,
+        "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+        "elapsed_s": 0.02
+      },
+      "exchange_attempted_with_this_actor": true,
+      "login_server_record": {
+        "outcome": "granted",
+        "actor_check": "signature+issuer+expiry (audience not checked)",
+        "actor_sub": "agent-client",
+        "actor_aud": "https://local-as.test",
+        "subject_sub": "al-control",
+        "actor_present": true
+      },
+      "what_arrived_upstream": [
+        {
+          "subject": "al-control",
+          "actor": "agent-client",
+          "issuer": "https://local-as.test",
+          "audience": "https://upstream.test/mcp",
+          "token": "sha256:27cb9ae14837"
+        }
+      ],
+      "observation": "forwarded_to_upstream"
+    },
+    "other_client": {
+      "what_was_sent": "a valid actor token for a DIFFERENT registered client (other-agent)",
+      "sent": {
+        "user": "al-other_client",
+        "user_token": "sha256:9fc3c17ca128",
+        "subject_may_act": null,
+        "actor_token": "sha256:f8d4d2f18704",
+        "actor_client_id": "other-agent",
+        "actor_audience": "https://local-as.test",
+        "actor_ttl": "default (3600 s)"
+      },
+      "caller": {
+        "succeeded": true,
+        "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+        "elapsed_s": 0.02
+      },
+      "exchange_attempted_with_this_actor": true,
+      "login_server_record": {
+        "outcome": "granted",
+        "actor_check": "signature+issuer+expiry (audience not checked)",
+        "actor_sub": "other-agent",
+        "actor_aud": "https://local-as.test",
+        "subject_sub": "al-other_client",
+        "actor_present": true
+      },
+      "what_arrived_upstream": [
+        {
+          "subject": "al-other_client",
+          "actor": "other-agent",
+          "issuer": "https://local-as.test",
+          "audience": "https://upstream.test/mcp",
+          "token": "sha256:e5990bf07ee6"
+        }
+      ],
+      "observation": "forwarded_to_upstream"
+    },
+    "expired": {
+      "what_was_sent": "the calling agent's actor token, expired 120 s ago",
+      "sent": {
+        "user": "al-expired",
+        "user_token": "sha256:07ba3e37030e",
+        "subject_may_act": null,
+        "actor_token": "sha256:0ddb27a0e9af",
+        "actor_client_id": "agent-client",
+        "actor_audience": "https://local-as.test",
+        "actor_ttl": -120
+      },
+      "caller": {
+        "succeeded": false,
+        "detail": "HTTPTransportError: HTTP 400 from http://127.0.0.1:4630/mcp: invalid request",
+        "elapsed_s": 0.0
+      },
+      "exchange_attempted_with_this_actor": true,
+      "login_server_record": {
+        "outcome": "refused: invalid_grant: actor_token ExpiredSignatureError",
+        "actor_check": "refused: ExpiredSignatureError",
+        "actor_sub": null,
+        "actor_aud": null,
+        "subject_sub": "al-expired",
+        "actor_present": true
+      },
+      "what_arrived_upstream": [],
+      "observation": "refused_by_login_server"
+    },
+    "other_audience": {
+      "what_was_sent": "the calling agent's actor token with audience https://other-service.test",
+      "sent": {
+        "user": "al-other_audience",
+        "user_token": "sha256:b6670616adc8",
+        "subject_may_act": null,
+        "actor_token": "sha256:d80282a01169",
+        "actor_client_id": "agent-client",
+        "actor_audience": "https://other-service.test",
+        "actor_ttl": "default (3600 s)"
+      },
+      "caller": {
+        "succeeded": true,
+        "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+        "elapsed_s": 0.02
+      },
+      "exchange_attempted_with_this_actor": true,
+      "login_server_record": {
+        "outcome": "granted",
+        "actor_check": "signature+issuer+expiry (audience not checked)",
+        "actor_sub": "agent-client",
+        "actor_aud": "https://other-service.test",
+        "subject_sub": "al-other_audience",
+        "actor_present": true
+      },
+      "what_arrived_upstream": [
+        {
+          "subject": "al-other_audience",
+          "actor": "agent-client",
+          "issuer": "https://local-as.test",
+          "audience": "https://upstream.test/mcp",
+          "token": "sha256:c99da57b1116"
+        }
+      ],
+      "observation": "forwarded_to_upstream"
+    }
+  },
+  "docs": {
+    "source_v1.7.0_actor_spec": "crates/agentgateway/src/http/auth/oauth/mod.rs (ActorTokenSpec, actor_token_from_request, may_act_authorizes, decode_unverified_jwt_claims)",
+    "crd_v1.7.0": "controller/install/helm/agentgateway-crds/templates/agentgateway.dev_agentgatewaypolicies.yaml (actorToken, mayAct)"
+  }
+}

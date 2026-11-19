@@ -60,6 +60,7 @@ from strangertest.delegate import (MockUpstream, grade_issuer_email_crossprovide
                                    observe_one_call, run_delegation_probe,
                                    run_issuer_unregistered_probe, run_scope_narrowing_probe,
                                    gate_run_problems, request_nonce)
+from strangertest.concurrency import InflightMixin
 from strangertest.mcp_client import MCPClient
 from strangertest.probe import Identity, ProbeError
 from strangertest.transports import HTTPTransport
@@ -91,9 +92,12 @@ CONFIGS = {
 NEW_MODES = ("scope_narrowing", "issuer_unregistered", "issuer_email_crossprovider")
 AGW_ADMIN_PORT = int(os.environ.get("AGW_ADMIN_PORT", "15790"))
 FIXTURE_PORT = int(os.environ.get("FIXTURE_PORT", "0"))
-FORBIDDEN_PORTS = {8790, 4444}
+FORBIDDEN_PORTS = {8790, 4444, 4000}
 # The ports the repo configs name; substituted at run time (config-only).
 _CFG_AS, _CFG_GW, _CFG_ADMIN, _CFG_UP = "127.0.0.1:8790", 3790, "127.0.0.1:15790", "127.0.0.1:18790"
+# The token endpoint in xid10-login-faults.yaml: the faulty endpoint's host:port
+# (TOKEN_ENDPOINT_HOST), set by the deeper-scenarios driver.
+_CFG_TOKEN_EP = "127.0.0.1:18791"
 
 
 def _port_ok(port):
@@ -122,6 +126,11 @@ def substitute_ports(text):
     gw_port = urlparse(AGW_URL).port
     out = text.replace(_CFG_AS, as_hostport).replace(_CFG_ADMIN, f"127.0.0.1:{AGW_ADMIN_PORT}")
     out = out.replace(_CFG_UP, f"127.0.0.1:{UPSTREAM_PORT}")
+    if _CFG_TOKEN_EP in out:
+        tep = os.environ.get("TOKEN_ENDPOINT_HOST")
+        if not tep:
+            raise SystemExit("ERROR: this config needs TOKEN_ENDPOINT_HOST")
+        out = out.replace(_CFG_TOKEN_EP, tep)
     out = re.sub(r"(\n\s+port:\s*)%d\b" % _CFG_GW, lambda m: m.group(1) + str(gw_port), out)
     return out
 
@@ -142,15 +151,23 @@ def jlog(label, obj):
 
 
 # ---------------------------------------------------------------- upstream
-class Upstream(MockUpstream):
+class Upstream(InflightMixin, MockUpstream):
     """Modern-JSON MCP upstream: answers initialize/server/discover + tools/list +
     tools/call + resources/list + resources/read, validating each bearer
     against the local_as JWKS. Also notes, per graded call, whether the
     caller's x-actor-token header leaked through to the upstream, and the
-    protocol version the gateway asked for on initialize."""
+    protocol version the gateway asked for on initialize.
+
+    Off by default (the existing modes see exactly the old behaviour):
+    ``notes`` {(issuer, subject): text} makes a graded call answer with the
+    note of the token's identity (the concurrent probe's marker), and
+    ``hold_seconds`` holds each graded call so overlap is observable
+    (``max_inflight``)."""
 
     def __init__(self, audience, jwks, issuer, port):
-        super().__init__(audience)
+        MockUpstream.__init__(self, audience)
+        self._inflight_init()
+        self.notes = {}
         self._iss = issuer
         self._key = jwt.algorithms.RSAAlgorithm.from_jwk(json.dumps(jwks["keys"][0]))
         self.actor_header_seen = []      # one bool per graded call
@@ -219,12 +236,17 @@ class Upstream(MockUpstream):
                     return
                 if m in ("resources/read", "tools/call"):
                     outer.actor_header_seen.append(self.headers.get("x-actor-token") is not None)
-                    outer._rec(m, bearer, msg.get("params"))
+                    outer.enter()
+                    try:
+                        who = outer._rec(m, bearer, msg.get("params"))
+                    finally:
+                        outer.leave()
+                    text = "ok" if not outer.notes else f"note={outer.notes.get(who, 'no-note')}"
                     if m == "resources/read":
                         uri = (msg.get("params") or {}).get("uri", "note://caller")
-                        result = {"contents": [{"uri": uri, "mimeType": "text/plain", "text": "ok"}]}
+                        result = {"contents": [{"uri": uri, "mimeType": "text/plain", "text": text}]}
                     else:
-                        result = {"content": [{"type": "text", "text": "ok"}], "isError": False}
+                        result = {"content": [{"type": "text", "text": text}], "isError": False}
                     self._send({"jsonrpc": "2.0", "id": mid, "result": {**result, **_RESULT}})
                     return
                 self._send({"jsonrpc": "2.0", "id": mid, "error": {"code": -32601, "message": "no"}})
@@ -241,7 +263,7 @@ class Upstream(MockUpstream):
         except Exception as e:
             self.receive(token=bearer, parsed=False, parse_error=str(e), method=method,
                          nonce=nonce)
-            return
+            return None
         act = c.get("act")
         self.emails[_fp(bearer)] = c.get("email")
         # Identity is the ORIGINAL login provider (orig_iss), not the exchange
@@ -252,6 +274,7 @@ class Upstream(MockUpstream):
                      audience=c.get("aud"), scope=c.get("scope"), token=bearer,
                      issuer=c.get("orig_iss") or c.get("iss"), parsed=True, method=method,
                      nonce=nonce)
+        return (c.get("orig_iss") or c.get("iss"), c.get("sub"))
 
     def start(self):
         threading.Thread(target=self._srv4.serve_forever, daemon=True).start()
@@ -443,6 +466,7 @@ def main():
 
         print("=== running delegation probe through agentgateway ===")
         n_before = len(up.actor_header_seen)
+        n_ex_before = len(_get(f"{AS_BASE}/exchanges"))
         try:
             report = run_delegation_probe(
                 AGW_URL, ident(la, sa, ia, ea), ident(lb, sb, ib, eb),
@@ -469,7 +493,10 @@ def main():
         runs_dir = os.path.join(_HERE, "runs")
         os.makedirs(runs_dir, exist_ok=True)
         suffix = f"-{trigger_kind}" if trigger_kind != "tool" else ""
-        out = os.path.join(runs_dir, f"agentgateway-{mode}{suffix}-{int(time.time())}.json")
+        login = login_server_facts()
+        afc = bool(login.get("act_from_client"))
+        tag = "-act_from_client" if afc else ""
+        out = os.path.join(runs_dir, f"agentgateway-{mode}{suffix}{tag}-{int(time.time())}.json")
         # Redact bearer tokens to a short fingerprint — never persist full JWTs.
         redacted_calls = [{**c, "token": _fp(c.get("token"))} for c in report.calls]
         with open(out, "w") as f:
@@ -501,6 +528,12 @@ def main():
                 "endpoints": endpoints,
                 "gateway_run_config_sha256": hashlib.sha256(
                     gw.run_config_text.encode()).hexdigest(),
+                # The login server's mode and, per exchange of the probe, the
+                # client authentication it saw (no secrets).
+                "login_server": login, "as_act_from_client": afc,
+                "exchanges_client_auth": [
+                    {k: r.get(k) for k in _EX_CLIENT_KEYS}
+                    for r in _get(f"{AS_BASE}/exchanges")[n_ex_before:]],
             }, f, indent=2)
         print(f"saved run -> {out}")
     finally:
@@ -528,6 +561,17 @@ def as_issue_k(sub, *, iss=None, email=None, scope="read:notes", key=None):
 def _get(url):
     with urllib.request.urlopen(url, timeout=10) as r:
         return json.loads(r.read())
+
+
+_EX_CLIENT_KEYS = ("seq", "subject_sub", "actor_present", "client_auth_method", "client_id",
+                   "client_valid", "act_source", "outcome")
+
+
+def login_server_facts():
+    """The local AS's client-authentication mode (absent on an older local_as)."""
+    oc = _get(f"{AS_BASE}/.well-known/openid-configuration")
+    return {"client_auth": oc.get("x_client_auth"), "act_from_client": oc.get("x_act_from_client"),
+            "clients": oc.get("x_clients"), "lax_subject_issuer": oc.get("x_lax_subject_issuer")}
 
 
 def ident_tok(label, token_fn):

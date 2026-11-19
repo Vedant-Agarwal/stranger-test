@@ -22,6 +22,14 @@ Gateways (``HANDLE_GATEWAY``):
   compliant config), ``per-user`` (default; backendAuth.passthrough, which
   forwards the user's own token: a token-passthrough config) or
   ``shared-credential`` (backendAuth.key, one static credential for all users).
+* ``litellm`` - LiteLLM 1.109.1 (``LL_BIN``: the ``litellm`` of its own venv),
+  run by this driver on a generated config (``HANDLE_LL_CONFIG``:
+  ``token-exchange`` (RFC 8693 at this driver's AS), ``passthrough``
+  (``auth_type: true_passthrough``, forwards the caller's token) or
+  ``shared-credential`` (``auth_type: bearer_token``, one static token)). The
+  config advertises 2026-07-28 to the client and speaks it upstream (the
+  practice task server is 2026-07-28 only), so the trial tests the tasks
+  extension, not a version mismatch. Caller key: a throwaway master key.
 * ``contextforge`` - ContextForge 1.1.1 (``mcpgateway`` importable in this
   Python), run by this driver from ``CF_HOME`` (a dir with a bootstrapped
   ``.env``/``mcp.db``) on ``HANDLE_GW_PORT``.
@@ -78,9 +86,13 @@ from strangertest.probe import Identity  # noqa: E402
 from strangertest.transports import HTTPTransport  # noqa: E402
 
 AS_ISSUER = "https://local-as.test"
-FORBIDDEN_PORTS = {8790, 4444}
+FORBIDDEN_PORTS = {8790, 4444, 4000}
 COSAI = "3.2.7 / 3.2.12"
 AGW_VARIANTS = ("token-exchange", "per-user", "shared-credential")
+LL_VARIANTS = ("token-exchange", "passthrough", "shared-credential")
+LL_PINNED = "1.109.1"
+LL_DOCS = ["https://docs.litellm.ai/docs/mcp", "https://docs.litellm.ai/docs/mcp_obo_auth",
+           "https://docs.litellm.ai/docs/mcp_oauth_passthrough"]
 ACTOR_CLIENT = "handle-agent"
 EXCHANGE_AUDIENCE = "https://upstream.test/mcp"
 # backendAuth.key is a documented agentgateway option (cited in every
@@ -305,6 +317,127 @@ class AgentGateway:
                 "must equal params.taskId, else -32020 'invalid MCP routing header'.",
             ],
         }
+
+
+# ------------------------------------------------------------------ LiteLLM
+class LiteLLMGateway:
+    name = "litellm"
+
+    def __init__(self, ports, as_url):
+        self.ports = ports
+        self.as_url = as_url
+        self.bin = os.environ.get("LL_BIN") or sys.exit("REFUSING: LL_BIN not set")
+        variant = os.environ.get("HANDLE_LL_CONFIG", "token-exchange")
+        if variant not in LL_VARIANTS:
+            sys.exit(f"REFUSING: HANDLE_LL_CONFIG must be one of {LL_VARIANTS}")
+        self.variant = variant
+        py = os.path.join(os.path.dirname(self.bin), "python")
+        ver = subprocess.check_output([py, "-I", "-c", "import importlib.metadata as m;"
+                                       "print(m.version('litellm'), m.version('mcp'))"]).decode().split()
+        if ver[0] != LL_PINNED:
+            sys.exit(f"REFUSING: LiteLLM {ver[0]} installed; pinned to {LL_PINNED}")
+        self.version = {"version": ver[0], "mcp": ver[1]}
+        self.url = f"http://127.0.0.1:{ports['gateway']}/mcp"
+        self.master_key = "sk-st-" + __import__("secrets").token_hex(16)
+        self.proc = None
+        self.upstream_auth = {
+            "token-exchange": ("token exchange: auth_type oauth2_token_exchange swaps the caller's "
+                               f"Authorization bearer at the local AS for a token with aud="
+                               f"{EXCHANGE_AUDIENCE} (no actor_token)"),
+            "passthrough": ("passthrough: auth_type true_passthrough forwards the caller's own "
+                            "bearer unchanged (a token-passthrough config)"),
+            "shared-credential": ("shared: auth_type bearer_token sends ONE static credential "
+                                  "for every user"),
+        }[variant]
+        self.upstream_identity_from = "jwt" if variant == "token-exchange" else "header"
+        self._static = None
+
+    def _config(self, as_):
+        up = f"http://127.0.0.1:{self.ports['upstream']}/mcp"
+        lines = ["model_list: []", "litellm_settings:", "  telemetry: false", "general_settings:",
+                 "  master_key: os.environ/LITELLM_MASTER_KEY",
+                 '  mcp_advertised_versions: ["2026-07-28", "2025-11-25"]',
+                 "mcp_servers:", "  tasks:", f"    url: {up}", "    transport: http",
+                 '    protocol_version: "2026-07-28"']
+        if self.variant == "token-exchange":
+            lines += ["    auth_type: oauth2_token_exchange",
+                      f"    token_exchange_endpoint: {self.as_url}/token",
+                      "    client_id: litellm-gw", "    client_secret: handle-throwaway",
+                      f"    audience: {EXCHANGE_AUDIENCE}",
+                      "    subject_token_type: urn:ietf:params:oauth:token-type:jwt",
+                      '    scopes: ["read:notes"]']
+        elif self.variant == "passthrough":
+            lines += ["    auth_type: true_passthrough"]
+        else:
+            self._static = as_.issue_user_token("litellm-service", audience=EXCHANGE_AUDIENCE)
+            lines += ["    auth_type: bearer_token", f"    authentication_token: {self._static}"]
+        text = "\n".join(lines) + "\n"
+        for bad in FORBIDDEN_PORTS:
+            if re.search(rf"\b{bad}\b", text):
+                sys.exit(f"REFUSING: the LiteLLM config mentions forbidden port {bad}")
+        return text
+
+    def start(self, as_=None):
+        scratch = required_scratch()
+        self._tmp = tempfile.mkdtemp(prefix="handle-ll-", dir=scratch)
+        self.config_text = self._config(as_)
+        cfg = os.path.join(self._tmp, "config.yaml")
+        with open(cfg, "w") as f:
+            f.write(self.config_text)
+        env = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": self._tmp,
+               "LITELLM_MASTER_KEY": self.master_key, "LITELLM_LOCAL_MODEL_COST_MAP": "True",
+               "LITELLM_TELEMETRY": "False", "LITELLM_LOG": "ERROR"}
+        self.proc = _Proc([self.bin, "--config", cfg, "--host", "127.0.0.1",
+                           "--port", str(self.ports["gateway"])], cwd=self._tmp, env=env)
+        _wait_port(self.ports["gateway"], self.proc.proc, 120, self.proc.tail)
+        for _ in range(60):
+            try:
+                with urllib.request.urlopen(f"http://127.0.0.1:{self.ports['gateway']}"
+                                            "/health/liveliness", timeout=2):
+                    break
+            except Exception:  # noqa: BLE001
+                time.sleep(0.5)
+        print(f"LiteLLM {self.version['version']} up @ {self.url} (config {self.variant})")
+
+    def token_for(self, as_, sub):
+        return as_.issue_user_token(sub, audience="litellm-api")
+
+    def extra_headers(self, as_):
+        return {"x-litellm-api-key": self.master_key}
+
+    def upstream_identity(self, sub, token):
+        if self.variant == "token-exchange":
+            return _fp(f"jwt:{AS_ISSUER}|{sub}")
+        if self.variant == "shared-credential":
+            return _fp(f"Bearer {self._static}")
+        return _fp(f"Bearer {token}")
+
+    def tool_name(self, client):
+        try:
+            for t in client.list_tools():
+                if str(t.get("name", "")).endswith("start_job"):
+                    return t["name"]
+        except Exception:  # noqa: BLE001
+            pass
+        return "tasks-start_job"
+
+    def stop(self):
+        if self.proc:
+            self.proc.stop()
+        if getattr(self, "_tmp", None):
+            shutil.rmtree(self._tmp, ignore_errors=True)
+
+    def record(self):
+        text = getattr(self, "config_text", "")
+        if self._static:
+            text = text.replace(self._static, _fp(self._static))
+        return {"gateway_version_full": self.version,
+                "gateway_label": "an LLM gateway with MCP features",
+                "gateway_config_run": text.replace("handle-throwaway", _fp("handle-throwaway")),
+                "master_key": _fp(self.master_key),
+                "upstream_auth": self.upstream_auth,
+                "upstream_identity_from": self.upstream_identity_from,
+                "docs": LL_DOCS}
 
 
 # ------------------------------------------------------------ ContextForge
@@ -544,7 +677,8 @@ def main():
         threading.Thread(target=srv.serve_forever, daemon=True).start()
         return srv
 
-    gw = AgentGateway(ports, as_url) if gateway == "agentgateway" else ContextForge(ports, as_url)
+    gw = (AgentGateway(ports, as_url) if gateway == "agentgateway" else
+          LiteLLMGateway(ports, as_url) if gateway == "litellm" else ContextForge(ports, as_url))
     base = {
         "probe": "handle", "stage": stage, "gateway": gateway,
         "cosai": COSAI,
@@ -556,7 +690,7 @@ def main():
     results = {}
     try:
         upstream = start_upstream(modes[0])
-        gw.start()
+        gw.start(as_) if gateway == "litellm" else gw.start()
         if gateway == "contextforge":
             gw.register(upstream_url)
         base["gateway_url"] = gw.url
@@ -672,7 +806,15 @@ def main():
     variant = gw.variant if gateway == "agentgateway" else None
     for mode, out in results.items():
         out["agw_config"] = variant
-        if gateway == "contextforge":
+        if gateway == "litellm":
+            out["ll_config"] = gw.variant
+            out["grade_subject"] = (f"LiteLLM {gw.version['version']} configured by us "
+                                    f"({gw.upstream_auth}) in front of the practice task "
+                                    f"server ({mode})")
+            out["counts_toward_gateway_verdict"] = gw.variant == "token-exchange"
+            if gw.variant == "passthrough":
+                out["violates_no_token_passthrough"] = True
+        elif gateway == "contextforge":
             out["grade_subject"] = ("gateway: ContextForge 1.1.1 (default settings, "
                                     "STREAMABLEHTTP gateway) in front of the practice "
                                     f"task server ({mode})")
@@ -701,7 +843,7 @@ def main():
 
     runs_dir = os.path.join(_HERE, "runs")
     os.makedirs(runs_dir, exist_ok=True)
-    tag = (f"-{gw.variant}" if gateway == "agentgateway" else "")
+    tag = (f"-{gw.variant}" if gateway in ("agentgateway", "litellm") else "")
     stamp = int(time.time())
     for mode, out in results.items():
         path = os.path.join(runs_dir, f"{gateway}-handle-{stage}{tag}-{mode}-{stamp}.json")

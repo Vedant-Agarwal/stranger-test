@@ -1,0 +1,840 @@
+{
+  "gateway": "litellm",
+  "gateway_label": "an LLM gateway with MCP features",
+  "gateway_version": "1.109.1",
+  "gateway_versions": {
+    "litellm": "1.109.1",
+    "mcp": "2.3.0",
+    "litellm_dist_record_sha256": "57dc8caed3fa25e152bb8dbe25e33ae2773840114bac774e6fac69b4b306043a",
+    "license": "MIT"
+  },
+  "deeper_mode": "concurrent",
+  "gateway_config_path": "integration/litellm/xid10-token-exchange.yaml",
+  "gateway_config_sha256": "3ea0d7b404ca452fdf8c338b461a5c703879273a1bc9e2aabdb11f0ec81f6d9b",
+  "gateway_run_config": "# LiteLLM 1.109.1 config for the XID-10 gate. Loopback only; the driver\n# (integration/xid10_litellm_gate.py) substitutes http://127.0.0.1:4684/mcp,\n# http://127.0.0.1:4690/token, sha256:34fc79bae69d and {{STATIC_TOKEN}} into a temp copy.\n# The master key comes from the environment (a throwaway generated per run).\nmodel_list: []\nlitellm_settings:\n  telemetry: false\ngeneral_settings:\n  master_key: os.environ/LITELLM_MASTER_KEY\nmcp_servers:\n  notes:\n    url: http://127.0.0.1:4684/mcp\n    transport: http\n    auth_type: oauth2_token_exchange\n    token_exchange_endpoint: http://127.0.0.1:4690/token\n    client_id: litellm-gw\n    client_secret: sha256:34fc79bae69d\n    audience: https://upstream.test/mcp\n    subject_token_type: urn:ietf:params:oauth:token-type:jwt\n    token_exchange_profile: rfc8693\n    scopes: [\"read:notes\"]\n",
+  "gateway_run_config_sha256": "9b4e8af21e9f5e26ae2798c9a2f92936448a5f6f75c3b0bbd7a25f53df93ada9",
+  "master_key": "sha256:f00617f83d34",
+  "setup": "LiteLLM defaults (single process, no database), token-exchange config",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4690",
+    "litellm": 4600,
+    "upstream": 4684,
+    "fixture_ports": [
+      4665,
+      4667
+    ]
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [
+      "agent-client",
+      "other-agent"
+    ],
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "client_negotiated_version": "2025-11-25",
+  "probe": "concurrent_identities",
+  "grade": "OK",
+  "label": "isolated",
+  "reason": "50 interleaved requests each got only their own marker and reached the upstream as their own caller; up to 17 upstream calls overlapped",
+  "pairs": 25,
+  "max_inflight": 17,
+  "target": "http://127.0.0.1:4600/mcp",
+  "timing": {
+    "wall_seconds": 0.92,
+    "send_spread_seconds": 0.003
+  },
+  "requests": [
+    {
+      "label": "A",
+      "nonce": "st-cA-e79d9aef3035",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-d2e1fcb32308",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-50fc64d92dec",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-e867eec24e36",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-07eaf08500cd",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-9674ffc99429",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-ff2cf0224bee",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-c60a955c8231",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-e5adb05c7552",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-e504c4c08ec5",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-5ccfd8b95ae4",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-74e4657e6be2",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-259f9d6e989d",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-555e5eafe989",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-622afef4c686",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-08a15a2fd788",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-9b3e4afb646c",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-58bf95dc975a",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-b39ab6c70cbf",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-26fb2862839a",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-f241f11435e6",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-26c7f9d2a76b",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-4ee46c5ca900",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-d4bd992b08a6",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-44313e788ec9",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-8cb3998ad7e1",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-c42ed486bbbd",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-c73a7ce729a7",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-ce968c958590",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-a6e598b5b242",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-8a16057269dd",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-d350209b5915",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-614d8b4b9d71",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-f6c6f3e3ed18",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-cee05a0280f3",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-b1ba1235b2d9",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-0efb93873f8d",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-e7d0226ece4b",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-4fd375da8e3c",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1b7e681690ad",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-df1788bd3c59",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-945b6c004eff",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-8f60c7686f66",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-b47790ef9955",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-99dcfaae49a1",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-df14fe96a9ce",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-79e52990697d",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-d414d8b210ae",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-f57dde1c99d0",
+      "text": "ok for https://local-as.test|alice note=mkA-d5b5d944d20d85b5f5cab515",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-d2ca1b7edd8d",
+      "text": "ok for https://local-as.test|bob note=mkB-d2e6e0f512cc9383d3f99de9",
+      "error": null
+    }
+  ],
+  "upstream_calls": [
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-ce968c958590",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-d414d8b210ae",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-5ccfd8b95ae4",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-d350209b5915",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-e7d0226ece4b",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-ff2cf0224bee",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-e867eec24e36",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-a6e598b5b242",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-26c7f9d2a76b",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-f241f11435e6",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-c42ed486bbbd",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-8cb3998ad7e1",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-07eaf08500cd",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-e5adb05c7552",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-cee05a0280f3",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-44313e788ec9",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-4fd375da8e3c",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-d2ca1b7edd8d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-50fc64d92dec",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-c60a955c8231",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-e79d9aef3035",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-259f9d6e989d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-555e5eafe989",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-622afef4c686",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-08a15a2fd788",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-9674ffc99429",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-58bf95dc975a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-d4bd992b08a6",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-f6c6f3e3ed18",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-8f60c7686f66",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-df1788bd3c59",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-945b6c004eff",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-df14fe96a9ce",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-79e52990697d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-74e4657e6be2",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-4ee46c5ca900",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-b1ba1235b2d9",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-b47790ef9955",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-d2e1fcb32308",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-614d8b4b9d71",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-99dcfaae49a1",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1b7e681690ad",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-f57dde1c99d0",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-b39ab6c70cbf",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-e504c4c08ec5",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-c73a7ce729a7",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-9b3e4afb646c",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-8a16057269dd",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-26fb2862839a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": null,
+      "token": "sha256:334374a59284"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-0efb93873f8d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": null,
+      "token": "sha256:02c7e7bd370a"
+    }
+  ],
+  "upstream_hold_seconds": 0.05,
+  "distinct_upstream_tokens_per_subject": {
+    "alice": 1,
+    "bob": 1
+  },
+  "markers": {
+    "A": "mkA-d5b5...",
+    "B": "mkB-d2e6..."
+  },
+  "broken_fixture": {
+    "name": "racy practice deputy (per-user state in one shared slot)",
+    "pairs": 25,
+    "racy": {
+      "serial_vulnerable": false,
+      "serial_failures": [],
+      "concurrent_grade": "FAIL",
+      "concurrent_label": "cross_identity_response",
+      "concurrent_reason": "25 response(s) carried the other user's marker (first: B's request got A's marker)",
+      "max_inflight": 50
+    },
+    "safe": {
+      "serial_vulnerable": false,
+      "serial_failures": [],
+      "concurrent_grade": "INCONCLUSIVE",
+      "concurrent_label": "inconclusive",
+      "concurrent_reason": "the leaky fixture was not shown, in this run, to FAIL this probe while passing the one-at-a-time probe",
+      "max_inflight": 50
+    },
+    "concurrent_grade": "FAIL",
+    "serial_vulnerable": false,
+    "safe_concurrent_not_fail": true,
+    "proven": true
+  }
+}

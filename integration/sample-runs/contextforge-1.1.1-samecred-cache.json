@@ -1,0 +1,75 @@
+{
+  "probe": "same-user-credentials",
+  "cve": "CVE-2026-110195",
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "install": "pip (mcp-contextforge-gateway==1.1.1), loopback only",
+  "method": "two inbound login JWTs for one user (alice); fresh token-exchange gateway per cold run; deterministic AS mints a distinct upstream token per inbound subject_token; recording upstream ties each read to its nonce",
+  "user": "admin@example.com",
+  "credentials": {
+    "cred1": "session JWT",
+    "cred2": "api-token JWT (same user)"
+  },
+  "cold_control": {
+    "grade": "OK",
+    "detail": "each credential minted its own distinct upstream token on a cold cache (positive control passed)"
+  },
+  "warm": {
+    "grade": "OK",
+    "detail": "no cross-credential reuse; the gateway caches per credential"
+  },
+  "grade": "OK",
+  "vulnerable": false,
+  "exchange_attempts": 4,
+  "exchange_subject_fingerprints": [
+    "sha256:1ed0917e7bc8",
+    "sha256:dd656b8c04a8"
+  ],
+  "observations": {
+    "user": "admin@example.com",
+    "cold_cred1_token": "sha256:2f0663238df7",
+    "cold_cred2_token": "sha256:893f60b08938",
+    "cold_cred1_scope": [],
+    "cold_cred2_scope": [],
+    "warm_repeat_token": "sha256:2f0663238df7",
+    "cache_hit_observed": true,
+    "exchange_attempts_after_populate": 3,
+    "exchange_attempts_after_repeat": 3,
+    "warm_populate_token": "sha256:2f0663238df7",
+    "warm_cred2_token": "sha256:893f60b08938",
+    "warm_cred2_scope": []
+  },
+  "upstream_calls": [
+    {
+      "method": "tools/call",
+      "nonce": "stcc-cold1-ec3ac80a81bb",
+      "auth_present": true,
+      "token_fp": "sha256:2f0663238df7"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "stcc-cold2-f0e117a5cb68",
+      "auth_present": true,
+      "token_fp": "sha256:893f60b08938"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "stcc-warm1-f20dc7e68a46",
+      "auth_present": true,
+      "token_fp": "sha256:2f0663238df7"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "stcc-warm1b-c0d4556a09f6",
+      "auth_present": true,
+      "token_fp": "sha256:2f0663238df7"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "stcc-warm2-4dff7db6a6ab",
+      "auth_present": true,
+      "token_fp": "sha256:893f60b08938"
+    }
+  ],
+  "summary": "OK: credential 'apitoken' reached the upstream with its own distinct token and scope, not credential 'session''s."
+}

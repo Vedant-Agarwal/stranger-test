@@ -14,7 +14,8 @@ delivered only to the identity that owns the resource. ``fail_listen`` mode
 makes ``subscriptions/listen`` reply with a plain JSON error instead of a
 stream, so the probe can prove it reports *inconclusive* rather than "no leak".
 
-NEVER expose this on a network. Run it:
+NEVER expose this on a network. Run it (example seed resource
+``note://provctl-39b01bf5/seed``):
 
     STRANGERTEST_MODE=leaky python3 -m strangertest.practice_http
 """
@@ -82,12 +83,18 @@ class SubscriptionState:
             return None
         if method == "tools/list":
             return _result(mid, {"tools": [
-                {"name": "set_resource"}, {"name": "get_resource"},
+                {"name": "set_resource"}, {"name": "get_resource"}, {"name": "whoami"},
             ]})
         if method == "tools/call":
             params = msg.get("params", {})
             name = params.get("name")
             args = params.get("arguments", {})
+            if name == "whoami":
+                principal = self._principal(identity)
+                return _result(mid, {
+                    "content": [{"type": "text", "text": principal}],
+                    "structuredContent": {"principal": principal},
+                })
             if name == "set_resource":
                 uri = args.get("uri")
                 with self._lock:
@@ -102,6 +109,15 @@ class SubscriptionState:
         if mid is None:
             return None
         return _err(mid, -32601, f"unknown method {method}")
+
+    def _principal(self, identity: str) -> str:
+        """The principal the server reports for a caller (a distinctness signal).
+
+        Default: per-identity, so distinct callers look distinct. A subclass can
+        override to return one shared value for all callers (identity collapse),
+        where a cross-identity notification is not a cross-user access gain."""
+        import hashlib as _h
+        return "sha256:" + _h.sha256(identity.encode()).hexdigest()[:12]
 
     def _fanout(self, uri: str) -> None:
         """Queue a resource-update for every subscriber that should see it.

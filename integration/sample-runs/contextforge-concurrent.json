@@ -1,0 +1,852 @@
+{
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "deeper_mode": "concurrent",
+  "gateway_config": {
+    "oauth_config": {
+      "grant_type": "token-exchange",
+      "token_url": "http://127.0.0.1:4690/token",
+      "target_audience": "https://upstream.test/mcp",
+      "subject_token_source": "inbound_user_jwt",
+      "client_id": "forge",
+      "token_endpoint_auth_method": "client_secret_post",
+      "scopes": [
+        "read:notes"
+      ],
+      "actor_token_source": "client_credentials"
+    },
+    "oauth_config_sha256": "d644f4d7f265d0f3fcc9ad18fee47bf8d93676617c1d02d236db2f5ea1b3ed36"
+  },
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4690",
+    "cf_url": "http://127.0.0.1:4644",
+    "upstream_port": 4683,
+    "fault_port": 4675,
+    "fixture_ports": [
+      4660,
+      4663
+    ]
+  },
+  "env": {
+    "SSO_ENABLED": "true",
+    "SSO_API_TOKEN_AUTH_ENABLED": "true",
+    "SSRF_ALLOW_LOCALHOST": "true",
+    "MCP_CLIENT_CONNECT_MODE": "auto",
+    "RATE_LIMIT_MEDIUM_RPM": "3000",
+    "RATE_LIMIT_MEDIUM_BURST": "500"
+  },
+  "login_server": {
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested",
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [
+      "agent-client",
+      "other-agent"
+    ]
+  },
+  "authorization_note": "external users granted tools.execute via a team-scoped developer role (not admin)",
+  "probe": "concurrent_identities",
+  "grade": "OK",
+  "label": "isolated",
+  "reason": "50 interleaved requests each got only their own marker and reached the upstream as their own caller; up to 43 upstream calls overlapped",
+  "pairs": 25,
+  "max_inflight": 43,
+  "target": "http://127.0.0.1:4644/servers/98c9993eb4fd498abf009dda4d9dc8b1/mcp",
+  "timing": {
+    "wall_seconds": 1.46,
+    "send_spread_seconds": 0.004
+  },
+  "requests": [
+    {
+      "label": "A",
+      "nonce": "st-cA-a60590e7ca97",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-ac39e1d7baa7",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-f1107b87faea",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-cd91e0aa579b",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-6611e310a95d",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-13b34bdc9ccd",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-d448a0a9f611",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-4aabe70a105f",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-997857f14c77",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-3d86d6aa7e1e",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-183d33ac2134",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-dd5fd7db3313",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-19f76144c223",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-925a26ace569",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-f36e8d78a7ac",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1189c185ba99",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-a51929881add",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-7972eb3aa1ef",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-226b0d9a819e",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-457399885d49",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-5b1ff50dca72",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-763eb8d6ca88",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-6075a151f096",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1bfa5c06eeff",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-ba3c6dd171de",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-a35f8b76a33b",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-5af6ba4e164e",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-2218f65db178",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-e945abc6bf68",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1401e5e99352",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-3c0bac57c66e",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-4a595b6d82a0",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-2103f8ff1d8e",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-13f3ecb343b6",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-a8a65d775aa3",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-672c4b7249ab",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-3e886172303d",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1b5ef818a138",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-0a02d69d602e",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-f4a9c4336b72",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-c59f99051067",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-9377de22b947",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-470971324e79",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-5fba5223d512",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-f2513f0589ee",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-343d79415f30",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-22507c15c523",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-562fdde185d0",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-65a5381c8cf7",
+      "text": "note=mkA-335a0897ee7d1ee351aee501",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-41a1315ccbad",
+      "text": "note=mkB-c4be95b62eb786d880692169",
+      "error": null
+    }
+  ],
+  "upstream_calls": [
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-2103f8ff1d8e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-d448a0a9f611",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-470971324e79",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-7972eb3aa1ef",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-19f76144c223",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-41a1315ccbad",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-65a5381c8cf7",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-562fdde185d0",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-925a26ace569",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-5fba5223d512",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1b5ef818a138",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-6611e310a95d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-3d86d6aa7e1e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-a8a65d775aa3",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-997857f14c77",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-a51929881add",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-2218f65db178",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-457399885d49",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-3c0bac57c66e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-0a02d69d602e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-183d33ac2134",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-e945abc6bf68",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-672c4b7249ab",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-cd91e0aa579b",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-ba3c6dd171de",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-343d79415f30",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-f1107b87faea",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-9377de22b947",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-4a595b6d82a0",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-f36e8d78a7ac",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-c59f99051067",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-f4a9c4336b72",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-13f3ecb343b6",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1bfa5c06eeff",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-5af6ba4e164e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-22507c15c523",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-4aabe70a105f",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-ac39e1d7baa7",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-763eb8d6ca88",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-dd5fd7db3313",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-3e886172303d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-a35f8b76a33b",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-f2513f0589ee",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1401e5e99352",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-6075a151f096",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-5b1ff50dca72",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-13b34bdc9ccd",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-226b0d9a819e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-a60590e7ca97",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "forge",
+      "token": "sha256:b0abf91bdedc"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1189c185ba99",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "forge",
+      "token": "sha256:6f2ef87a82ec"
+    }
+  ],
+  "upstream_hold_seconds": 0.05,
+  "distinct_upstream_tokens_per_subject": {
+    "alice": 1,
+    "bob": 1
+  },
+  "markers": {
+    "A": "mkA-335a...",
+    "B": "mkB-c4be..."
+  },
+  "broken_fixture": {
+    "name": "racy practice deputy (per-user state in one shared slot)",
+    "pairs": 25,
+    "racy": {
+      "serial_vulnerable": false,
+      "serial_failures": [],
+      "concurrent_grade": "FAIL",
+      "concurrent_label": "cross_identity_response",
+      "concurrent_reason": "25 response(s) carried the other user's marker (first: A's request got B's marker)",
+      "max_inflight": 50
+    },
+    "safe": {
+      "serial_vulnerable": false,
+      "serial_failures": [],
+      "concurrent_grade": "INCONCLUSIVE",
+      "concurrent_label": "inconclusive",
+      "concurrent_reason": "the leaky fixture was not shown, in this run, to FAIL this probe while passing the one-at-a-time probe",
+      "max_inflight": 50
+    },
+    "concurrent_grade": "FAIL",
+    "serial_vulnerable": false,
+    "safe_concurrent_not_fail": true,
+    "proven": true
+  },
+  "virtual_server": "http://127.0.0.1:4644/servers/98c9993eb4fd498abf009dda4d9dc8b1/mcp"
+}

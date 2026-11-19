@@ -105,7 +105,7 @@ def cmd_practice(args: argparse.Namespace) -> int:
     return 1 if report.leaked else 0
 
 
-def cmd_scan(args: argparse.Namespace) -> int:
+def cmd_crosscheck(args: argparse.Namespace) -> int:
     def http_identity(label: str, token) -> Identity:
         headers = {"Authorization": f"Bearer {token}"} if token else {}
         return Identity(
@@ -137,6 +137,118 @@ def cmd_scan(args: argparse.Namespace) -> int:
     else:
         print(report.summary())
     return EXIT_FINDING if report.leaked else EXIT_OK
+
+
+# --------------------------------------------------------------------------- #
+# `scan` — the one-command fingerprint scanner (mcp-scan-style wedge).
+# --------------------------------------------------------------------------- #
+
+def _load_scan_api():
+    """Return ``(profile_target, run_checks)``.
+
+    Prefers the sibling agents' real modules; falls back to the bundled mock so
+    the CLI and renderers work before they land. INTEGRATION NOTE: once the
+    adapter and check-catalog agents merge, this import resolves to the real
+    modules automatically — no code change is needed here. To force the mock
+    (e.g. in CI before the siblings land), set STRANGERTEST_SCAN_MOCK=1.
+    """
+    import os as _os
+
+    if not _os.environ.get("STRANGERTEST_SCAN_MOCK"):
+        try:
+            from .scan.adapter import profile_target  # type: ignore
+            from .scan.checks import run_checks  # type: ignore
+            return profile_target, run_checks
+        except Exception:
+            pass
+    from .scan._mock import mock_profile_target, mock_run_checks
+    return mock_profile_target, mock_run_checks
+
+
+def cmd_scan(args: argparse.Namespace) -> int:
+    from .guard import extract_host, is_local_target
+    from .scan import report as scan_report
+
+    # Choose output format (human unless --json/--sarif).
+    if getattr(args, "sarif", False):
+        fmt = "sarif"
+    elif getattr(args, "json", False):
+        fmt = "json"
+    else:
+        fmt = "human"
+
+    # Safe by default: refuse a non-loopback target unless --allow-nonloopback.
+    host = extract_host(args.url)
+    if host is None:
+        print(f"error: could not read a host from {args.url!r}", file=sys.stderr)
+        return scan_report.EXIT_ERROR
+    if not is_local_target(host) and not args.allow_nonloopback:
+        print(
+            f"refused: {host} is not a loopback target. Re-run with "
+            f"--allow-nonloopback to scan it.",
+            file=sys.stderr,
+        )
+        print("only scan servers you are authorized to test.", file=sys.stderr)
+        return scan_report.EXIT_ERROR
+    if not is_local_target(host) and args.allow_nonloopback:
+        print("only scan servers you are authorized to test.", file=sys.stderr)
+
+    profile_target, run_checks = _load_scan_api()
+
+    # One read-only pass. Any failure to build the profile is exit 2.
+    try:
+        profile = profile_target(
+            args.url,
+            bearer=args.bearer,
+            timeout=args.timeout,
+            allow_nonloopback=args.allow_nonloopback,
+        )
+    except Exception as exc:  # adapter failure -> unreachable/error
+        print(f"error: {exc}", file=sys.stderr)
+        return scan_report.EXIT_ERROR
+
+    reachable = scan_report.field_of(profile, "reachable", False)
+    findings = []
+    if reachable:
+        try:
+            findings = run_checks(profile, live=None)
+        except Exception as exc:
+            print(f"error: running checks: {exc}", file=sys.stderr)
+            return scan_report.EXIT_ERROR
+
+    code = scan_report.render(profile, findings, fmt=fmt)
+
+    # Unreachable target is always exit 2, whatever the renderer returned.
+    if not reachable:
+        return scan_report.EXIT_ERROR
+    return code
+
+
+def _add_scan_parser(sub) -> None:
+    scan = sub.add_parser(
+        "scan",
+        help="One-command read-only fingerprint scan of an MCP server.",
+        description=(
+            "Profiles an MCP server in a single read-only pass and flags "
+            "authorization risk signals (session handling, cache scope, "
+            "advertised delegation, auth posture). Safe by default: loopback "
+            "targets only unless --allow-nonloopback. This flags risk signals; "
+            "it does not confirm a leak — run the lab deep-check (the A/B "
+            "probes) to confirm the XID auth-leak classes."
+        ),
+    )
+    scan.add_argument("url", help="MCP server endpoint, e.g. http://localhost:4600/mcp")
+    scan.add_argument("--bearer", default=None, help="Bearer token to present (fingerprinted, never echoed).")
+    scan.add_argument("--json", action="store_true", help="Emit the {profile, findings} report as JSON (fingerprints only).")
+    scan.add_argument("--sarif", action="store_true", help="Emit a SARIF 2.1.0 log (CI code-scanning drop-in).")
+    scan.add_argument("--timeout", type=float, default=10.0, help="Per-request timeout in seconds (default: 10).")
+    scan.add_argument(
+        "--allow-nonloopback",
+        dest="allow_nonloopback",
+        action="store_true",
+        help="Permit a non-loopback target (only scan servers you are authorized to test).",
+    )
+    scan.set_defaults(func=cmd_scan)
 
 
 def _tasks_identity(url: str, token, label: str) -> Identity:
@@ -291,6 +403,71 @@ def cmd_demo(args: argparse.Namespace) -> int:
     return _DEMO_PROBES[args.probe](args.json)
 
 
+def _confirm_print(rep, as_json: bool) -> None:
+    if as_json:
+        import json as _json
+        print(_json.dumps(rep.to_dict(), indent=2, default=str))
+    else:
+        print(rep.summary())
+
+
+def cmd_confirm(args: argparse.Namespace) -> int:
+    """Tier-2: confirm a cross-user leak with a two-identity lab run."""
+    from . import deep_tests as dt
+
+    if getattr(args, "list", False) or not args.test:
+        print("Deep (two-identity) tests. Run one with:")
+        print("  stranger-test confirm <test> --demo                      (bundled fixtures)")
+        print("  stranger-test confirm <test> <url> --token-a A --token-b B  (a target you may test)")
+        for t in dt.DEEP_TESTS.values():
+            mode = "target+demo" if t.run_target else "demo only (lab)"
+            print(f"\n  {t.id}  [{mode}]\n    {t.title} — {t.summary}")
+        return 0
+
+    t = dt.get(args.test)
+    if t is None:
+        print(f"error: unknown test {args.test!r}; see `confirm --list`", file=sys.stderr)
+        return 3
+
+    if getattr(args, "demo", False):
+        res = t.demo()
+        leaky, safe = res["leaky"], res["safe"]
+        print(f"== {t.title} — demo (bundled loopback fixtures) ==\n")
+        print("-- against a KNOWN-LEAKY server (the test must catch it):")
+        _confirm_print(leaky, args.json)
+        print("\n-- against a SAFE server (must come back clean):")
+        _confirm_print(safe, args.json)
+        works = dt.leaked(leaky) and str(getattr(safe, "grade", "")) == "OK"
+        print(f"\nVERDICT: the test {'WORKS' if works else 'did NOT behave as expected'} "
+              f"(leaky -> {dt._grade_of(leaky)}, safe -> {dt._grade_of(safe)}).")
+        return 0 if works else 2
+
+    if not args.url:
+        print("error: give <url> with --token-a/--token-b, or use --demo", file=sys.stderr)
+        return 3
+    if t.run_target is None:
+        print(f"{t.id} is a lab test: {t.target_note}", file=sys.stderr)
+        return 3
+
+    from .guard import extract_host, is_local_target
+    host = extract_host(args.url)
+    if host is None:
+        print(f"error: could not read a host from {args.url!r}", file=sys.stderr)
+        return 2
+    if not is_local_target(host) and not args.allow_nonloopback:
+        print(f"refused: {host} is not a loopback target. Re-run with --allow-nonloopback.",
+              file=sys.stderr)
+        print("only run deep tests against servers you are authorized to test.", file=sys.stderr)
+        return 3
+    if not is_local_target(host):
+        print("only run deep tests against servers you are authorized to test.", file=sys.stderr)
+
+    rep = t.run_target(args.url, args.token_a, args.token_b)
+    _confirm_print(rep, args.json)
+    g = str(getattr(rep, "grade", "INCONCLUSIVE"))
+    return 1 if g in ("LEAK", "FAIL") else (0 if g == "OK" else 2)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = _Parser(
         prog="strangertest",
@@ -323,26 +500,29 @@ def build_parser() -> argparse.ArgumentParser:
     )
     practice.set_defaults(func=cmd_practice)
 
-    scan = sub.add_parser(
-        "scan",
-        help="Probe an authorized MCP server over HTTP as two identities.",
+    _add_scan_parser(sub)
+
+    crosscheck = sub.add_parser(
+        "crosscheck",
+        help="Two-identity read/marker probe against an authorized MCP server.",
         description=(
             "Plants a marker as identity A (via --token-a) and checks whether "
             "identity B (--token-b, or anonymous if omitted) can read it back. "
             "Non-local targets require --authorized and are your responsibility "
-            "to be permitted to test."
+            "to be permitted to test. (This is the manual A/B probe; for the "
+            "one-command fingerprint scan, see `scan`.)"
         ),
     )
-    scan.add_argument("url", help="MCP server endpoint, e.g. https://mcp.example.com/mcp")
-    scan.add_argument("--token-a", dest="token_a", default=None, help="Bearer token for identity A (the planter).")
-    scan.add_argument("--token-b", dest="token_b", default=None, help="Bearer token for identity B (the reader); omit for an anonymous B.")
-    scan.add_argument("--plant-tool", dest="plant_tool", required=True, help="Tool name A calls to store the marker.")
-    scan.add_argument("--read-tool", dest="read_tool", required=True, help="Tool name B calls to read it back.")
-    scan.add_argument("--key", default="secret", help="Key the marker is stored under (default: secret).")
-    scan.add_argument("--authorized", action="store_true", help="Confirm you are authorized to test this target (required for non-local hosts).")
-    scan.add_argument("--authorization-note", dest="authorization_note", default=None, help="Who authorized this test; recorded in the report.")
-    scan.add_argument("--json", action="store_true", help="Print the full JSON report.")
-    scan.set_defaults(func=cmd_scan)
+    crosscheck.add_argument("url", help="MCP server endpoint, e.g. https://mcp.example.com/mcp")
+    crosscheck.add_argument("--token-a", dest="token_a", default=None, help="Bearer token for identity A (the planter).")
+    crosscheck.add_argument("--token-b", dest="token_b", default=None, help="Bearer token for identity B (the reader); omit for an anonymous B.")
+    crosscheck.add_argument("--plant-tool", dest="plant_tool", required=True, help="Tool name A calls to store the marker.")
+    crosscheck.add_argument("--read-tool", dest="read_tool", required=True, help="Tool name B calls to read it back.")
+    crosscheck.add_argument("--key", default="secret", help="Key the marker is stored under (default: secret).")
+    crosscheck.add_argument("--authorized", action="store_true", help="Confirm you are authorized to test this target (required for non-local hosts).")
+    crosscheck.add_argument("--authorization-note", dest="authorization_note", default=None, help="Who authorized this test; recorded in the report.")
+    crosscheck.add_argument("--json", action="store_true", help="Print the full JSON report.")
+    crosscheck.set_defaults(func=cmd_crosscheck)
 
     handle = sub.add_parser(
         "handle",
@@ -395,6 +575,27 @@ def build_parser() -> argparse.ArgumentParser:
     surv.add_argument("--all", action="store_true", help="With --json, include every handler found, not only the candidates.")
     surv.add_argument("--include-tests", dest="include_tests", action="store_true", help="Also scan test files and tests/ directories.")
     surv.set_defaults(func=cmd_survey)
+
+    confirm = sub.add_parser(
+        "confirm",
+        help="Tier-2: confirm a cross-user leak with a two-identity lab run.",
+        description=(
+            "Run a deep two-identity test. --demo runs it against bundled leaky+safe "
+            "fixtures (no target or credentials). Otherwise give a URL and two bearer "
+            "tokens for a server you are authorized to test. `confirm --list` lists the tests."
+        ),
+    )
+    confirm.add_argument("test", nargs="?", help="which test (see --list)")
+    confirm.add_argument("url", nargs="?", default=None, help="MCP server endpoint (real-target mode)")
+    confirm.add_argument("--demo", action="store_true", help="run against bundled loopback fixtures")
+    confirm.add_argument("--list", action="store_true", help="list the deep tests")
+    confirm.add_argument("--token-a", dest="token_a", default=None, help="bearer token for identity A")
+    confirm.add_argument("--token-b", dest="token_b", default=None, help="bearer token for identity B")
+    confirm.add_argument("--allow-nonloopback", dest="allow_nonloopback", action="store_true",
+                         help="permit a non-loopback target (authorized testing only)")
+    confirm.add_argument("--json", action="store_true", help="JSON output")
+    confirm.set_defaults(func=cmd_confirm)
+
     return parser
 
 

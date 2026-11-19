@@ -1,0 +1,126 @@
+{
+  "probe": "issuer_unregistered",
+  "cosai": "CoSAI MCP Security v2.0, 3.2.2 / 3.3.2",
+  "grade": "INCONCLUSIVE",
+  "label": "inconclusive",
+  "reason": "the gateway passed the unregistered-issuer token on to the token exchange; it was stopped later, not by the gateway",
+  "target": "http://127.0.0.1:4500/mcp",
+  "controls": {
+    "broken_fixture_failed": false,
+    "control_before_reached": true,
+    "control_after_reached": true,
+    "quiet_baseline": true
+  },
+  "evidence": {
+    "probe_issuer": "https://unregistered.test",
+    "probe_token": "sha256:ff9fb79adc08",
+    "nonces": {
+      "control_before": "st-cb-acd64ffc94b3",
+      "probe": "st-probe-3425ac9f8d1e",
+      "control_after": "st-ca-2f38dfe0d2a1"
+    },
+    "probe_succeeded": false,
+    "probe_error": "tool error result: [{'text': 'Error: Missing or invalid subject token. Authenticate with your identity provider and send its token in the Authorization Bearer header. LiteLLM API keys and Admin UI sessions cannot be used for token exchange.', 'type': 'text'}]",
+    "probe_upstream_calls": [],
+    "unattributed_calls": [],
+    "control_before_succeeded": true,
+    "control_before_calls": [
+      {
+        "subject": "mallory",
+        "actor": null,
+        "audience": "https://upstream.test/mcp",
+        "scope": "read:notes",
+        "token": "sha256:bd8310423514",
+        "issuer": "https://provx.test",
+        "parsed": true,
+        "parse_error": null,
+        "method": "tools/call",
+        "nonce": "st-cb-acd64ffc94b3",
+        "linked": false
+      }
+    ],
+    "control_before_error": null,
+    "control_after_succeeded": true,
+    "control_after_calls": [
+      {
+        "subject": "mallory",
+        "actor": null,
+        "audience": "https://upstream.test/mcp",
+        "scope": "read:notes",
+        "token": "sha256:bd8310423514",
+        "issuer": "https://provx.test",
+        "parsed": true,
+        "parse_error": null,
+        "method": "tools/call",
+        "nonce": "st-ca-2f38dfe0d2a1",
+        "linked": false
+      }
+    ],
+    "control_after_error": null,
+    "quiet_baseline_calls": 0,
+    "quiet_seconds": 3,
+    "exchange_attempted_with_probe_token": true,
+    "exchange_records_for_probe_token": [
+      {
+        "time": 1794629633.9970381,
+        "subject_fp": "sha256:ff9fb79adc08",
+        "requested_scope": "read:notes",
+        "requested_audience": "https://upstream.test/mcp",
+        "actor_present": false,
+        "client_auth_method": "client_secret_post",
+        "client_id": "litellm-gw",
+        "client_valid": null,
+        "client_auth_mode": "none",
+        "outcome": "refused: invalid_grant: unregistered issuer 'https://unregistered.test'",
+        "seq": 2
+      }
+    ]
+  },
+  "gateway": "litellm",
+  "gateway_label": "an LLM gateway with MCP features",
+  "gateway_version": "1.109.1",
+  "gateway_versions": {
+    "litellm": "1.109.1",
+    "mcp": "2.3.0",
+    "litellm_dist_record_sha256": "c2eeb7e5480be96e5281f4613bc92895151fcba8b7e29605c255da076d98b697",
+    "license": "MIT"
+  },
+  "install": "pip litellm[proxy]==1.109.1 in its own venv (open-source build, no licence key, no database)",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4590",
+    "as": 4590,
+    "litellm": 4500,
+    "upstream": 4580,
+    "fixture_base": 4560
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [],
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "as_act_from_client": false,
+  "client_transport": "HTTPTransport (legacy Streamable HTTP); MCPClient asks for 2026-07-28, LiteLLM answers with its default set",
+  "upstream_protocol_version": "2025-11-25 (the upstream answers initialize with the requested legacy version; LiteLLM 1.109.1 advertises 2024-11-05..2025-11-25 by default)",
+  "caller_auth": "x-litellm-api-key: throwaway master key; Authorization: Bearer <user JWT>",
+  "docs": {
+    "mcp_overview": "https://docs.litellm.ai/docs/mcp",
+    "token_exchange": "https://docs.litellm.ai/docs/mcp_obo_auth",
+    "passthrough": "https://docs.litellm.ai/docs/mcp_oauth_passthrough"
+  },
+  "gateway_config_path": "integration/litellm/xid10-token-exchange.yaml",
+  "gateway_config_sha256": "3ea0d7b404ca452fdf8c338b461a5c703879273a1bc9e2aabdb11f0ec81f6d9b",
+  "gateway_run_config": "# LiteLLM 1.109.1 config for the XID-10 gate. Loopback only; the driver\n# (integration/xid10_litellm_gate.py) substitutes http://127.0.0.1:4580/mcp,\n# http://127.0.0.1:4590/token, sha256:273f426206c4 and {{STATIC_TOKEN}} into a temp copy.\n# The master key comes from the environment (a throwaway generated per run).\nmodel_list: []\nlitellm_settings:\n  telemetry: false\ngeneral_settings:\n  master_key: os.environ/LITELLM_MASTER_KEY\nmcp_servers:\n  notes:\n    url: http://127.0.0.1:4580/mcp\n    transport: http\n    auth_type: oauth2_token_exchange\n    token_exchange_endpoint: http://127.0.0.1:4590/token\n    client_id: litellm-gw\n    client_secret: sha256:273f426206c4\n    audience: https://upstream.test/mcp\n    subject_token_type: urn:ietf:params:oauth:token-type:jwt\n    token_exchange_profile: rfc8693\n    scopes: [\"read:notes\"]\n",
+  "gateway_run_config_sha256": "a4d49d30e4c6aaae2df708a74d624742e2d61d96e2ccc09bb0ce7b6cc30c8445",
+  "master_key": "sha256:d7d32819a502",
+  "signing_key_of_probe": "provx (LiteLLM does not validate inbound tokens in this config)",
+  "observation_only": true,
+  "observation": "where issuer validation happens: the same probe against the default (strict) login server; not graded, no broken fixture (the AS refuses the token, so no fixture could fail here)",
+  "run_valid": true,
+  "run_problems": []
+}

@@ -1,4 +1,4 @@
-"""Private-cache gate (CoSAI 3.2.7) against REAL gateways: ContextForge and agentgateway.
+"""Private-cache gate (CoSAI 3.3.2 Tool output: Cacheable result handling; see also 3.2.7) against REAL gateways: ContextForge and agentgateway.
 
 Drives ``strangertest.cachescope`` (the private-cached-results probe) through a
 real MCP gateway in front of the practice per-user upstream, and, in the SAME

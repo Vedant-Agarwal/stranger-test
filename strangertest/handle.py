@@ -4,8 +4,9 @@ A starts a long-running task (``tools/call`` returning ``resultType: "task"``)
 and holds its ``taskId``. Identity B, authenticated as B and given that taskId,
 calls ``tasks/get``, ``tasks/update`` and ``tasks/cancel`` on it. The tasks
 extension (``io.modelcontextprotocol/tasks``) says servers MUST authenticate
-and authorize each task request; CoSAI MCP Security v2.0 sections 3.2.7 and
-3.2.12 cover the same failure. Guessing taskIds is out of scope: B is given the
+and authorize each task request; the leveled, auditable rule is CoSAI MCP
+Security v2.0 3.3.2 State: Explicit state handle integrity (see also 3.2.7 /
+3.2.12). Guessing taskIds is out of scope: B is given the
 ID.
 
 Three tasks are started by A, one per attacked method, so a leak is attributed

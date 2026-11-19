@@ -1,0 +1,122 @@
+{
+  "probe": "scope_narrowing",
+  "cosai": "CoSAI MCP Security v2.0, 3.3.2",
+  "grade": "OK",
+  "label": "narrowed",
+  "reason": "narrower than the subject and equal to what the gateway requested",
+  "target": "http://127.0.0.1:4500/mcp",
+  "controls": {
+    "broken_fixture_failed": true,
+    "subject_scope_broader_than_configured": true
+  },
+  "observations": [],
+  "per_call": [
+    {
+      "subject_scope": "read:notes write:notes admin",
+      "requested_scope": "read:notes",
+      "requested_observed": true,
+      "issued_scope": "read:notes",
+      "upstream_scope": "read:notes",
+      "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+      "grade": "OK",
+      "label": "narrowed",
+      "reason": "narrower than the subject and equal to what the gateway requested",
+      "principal": "A",
+      "method": "tools/call",
+      "token": "sha256:1d63692b8cb1",
+      "subject": "alice",
+      "issuer": "https://local-as.test",
+      "exchange_actor_present": false,
+      "exchange_requested_audience": "https://upstream.test/mcp"
+    },
+    {
+      "subject_scope": "read:notes write:notes admin",
+      "requested_scope": "read:notes",
+      "requested_observed": true,
+      "issued_scope": "read:notes",
+      "upstream_scope": "read:notes",
+      "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+      "grade": "OK",
+      "label": "narrowed",
+      "reason": "narrower than the subject and equal to what the gateway requested",
+      "principal": "B",
+      "method": "tools/call",
+      "token": "sha256:de00443ea645",
+      "subject": "bob",
+      "issuer": "https://local-as.test",
+      "exchange_actor_present": false,
+      "exchange_requested_audience": "https://upstream.test/mcp"
+    },
+    {
+      "subject_scope": "read:notes write:notes admin",
+      "requested_scope": "read:notes",
+      "requested_observed": true,
+      "issued_scope": "read:notes",
+      "upstream_scope": "read:notes",
+      "who_narrowed": "gateway requested 'read:notes'; AS issued 'read:notes'; narrowing requested by the gateway",
+      "grade": "OK",
+      "label": "narrowed",
+      "reason": "narrower than the subject and equal to what the gateway requested",
+      "principal": "A",
+      "method": "tools/call",
+      "token": "sha256:aee7bf4a223b",
+      "subject": "alice",
+      "issuer": "https://local-as.test",
+      "exchange_actor_present": false,
+      "exchange_requested_audience": "https://upstream.test/mcp"
+    }
+  ],
+  "gateway": "litellm",
+  "gateway_label": "an LLM gateway with MCP features",
+  "gateway_version": "1.109.1",
+  "gateway_versions": {
+    "litellm": "1.109.1",
+    "mcp": "2.3.0",
+    "litellm_dist_record_sha256": "c2eeb7e5480be96e5281f4613bc92895151fcba8b7e29605c255da076d98b697",
+    "license": "MIT"
+  },
+  "install": "pip litellm[proxy]==1.109.1 in its own venv (open-source build, no licence key, no database)",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4590",
+    "as": 4590,
+    "litellm": 4500,
+    "upstream": 4580,
+    "fixture_base": 4560
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [],
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "as_act_from_client": false,
+  "client_transport": "HTTPTransport (legacy Streamable HTTP); MCPClient asks for 2026-07-28, LiteLLM answers with its default set",
+  "upstream_protocol_version": "2025-11-25 (the upstream answers initialize with the requested legacy version; LiteLLM 1.109.1 advertises 2024-11-05..2025-11-25 by default)",
+  "caller_auth": "x-litellm-api-key: throwaway master key; Authorization: Bearer <user JWT>",
+  "docs": {
+    "mcp_overview": "https://docs.litellm.ai/docs/mcp",
+    "token_exchange": "https://docs.litellm.ai/docs/mcp_obo_auth",
+    "passthrough": "https://docs.litellm.ai/docs/mcp_oauth_passthrough"
+  },
+  "gateway_config_path": "integration/litellm/xid10-token-exchange.yaml",
+  "gateway_config_sha256": "3ea0d7b404ca452fdf8c338b461a5c703879273a1bc9e2aabdb11f0ec81f6d9b",
+  "gateway_run_config": "# LiteLLM 1.109.1 config for the XID-10 gate. Loopback only; the driver\n# (integration/xid10_litellm_gate.py) substitutes http://127.0.0.1:4580/mcp,\n# http://127.0.0.1:4590/token, sha256:273f426206c4 and {{STATIC_TOKEN}} into a temp copy.\n# The master key comes from the environment (a throwaway generated per run).\nmodel_list: []\nlitellm_settings:\n  telemetry: false\ngeneral_settings:\n  master_key: os.environ/LITELLM_MASTER_KEY\nmcp_servers:\n  notes:\n    url: http://127.0.0.1:4580/mcp\n    transport: http\n    auth_type: oauth2_token_exchange\n    token_exchange_endpoint: http://127.0.0.1:4590/token\n    client_id: litellm-gw\n    client_secret: sha256:273f426206c4\n    audience: https://upstream.test/mcp\n    subject_token_type: urn:ietf:params:oauth:token-type:jwt\n    token_exchange_profile: rfc8693\n    scopes: [\"read:notes\"]\n",
+  "gateway_run_config_sha256": "a4d49d30e4c6aaae2df708a74d624742e2d61d96e2ccc09bb0ce7b6cc30c8445",
+  "master_key": "sha256:37993b33df70",
+  "mode": "scope_narrowing",
+  "gateway_scopes_config": [
+    "read:notes"
+  ],
+  "broken_fixture": {
+    "name": "thin_deputy scope_escalation",
+    "grade": "FAIL",
+    "reason": "upstream scope holds ['delete:all'] that the subject token lacked"
+  },
+  "run_valid": true,
+  "run_problems": []
+}

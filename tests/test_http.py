@@ -122,7 +122,7 @@ class ScanOverHTTPTests(unittest.TestCase):
     def test_leak_detected_against_shared_server(self):
         with running_server("leaky") as url:
             code, out = self._run([
-                "scan", url, "--token-a", "AAA", "--token-b", "BBB",
+                "crosscheck", url, "--token-a", "AAA", "--token-b", "BBB",
                 "--plant-tool", "kv_set", "--read-tool", "kv_get",
             ])
         self.assertEqual(code, 1)
@@ -131,7 +131,7 @@ class ScanOverHTTPTests(unittest.TestCase):
     def test_anonymous_reader_still_leaks(self):
         with running_server("leaky") as url:
             code, out = self._run([
-                "scan", url, "--token-a", "AAA",
+                "crosscheck", url, "--token-a", "AAA",
                 "--plant-tool", "kv_set", "--read-tool", "kv_get",
             ])
         self.assertEqual(code, 1)
@@ -139,7 +139,7 @@ class ScanOverHTTPTests(unittest.TestCase):
     def test_no_leak_against_isolated_server(self):
         with running_server("safe") as url:
             code, out = self._run([
-                "scan", url, "--token-a", "AAA", "--token-b", "BBB",
+                "crosscheck", url, "--token-a", "AAA", "--token-b", "BBB",
                 "--plant-tool", "kv_set", "--read-tool", "kv_get",
             ])
         self.assertEqual(code, 0)
@@ -149,7 +149,7 @@ class ScanOverHTTPTests(unittest.TestCase):
         # Guard refuses before any network call is made: authorization
         # refusal is exit 3 (usage/authorization), not 2.
         code, _ = self._run([
-            "scan", "https://mcp.example.com/mcp", "--token-a", "AAA",
+            "crosscheck", "https://mcp.example.com/mcp", "--token-a", "AAA",
             "--plant-tool", "kv_set", "--read-tool", "kv_get",
         ])
         self.assertEqual(code, 3)
@@ -161,7 +161,7 @@ class ScanOverHTTPTests(unittest.TestCase):
         err = io.StringIO()
         with redirect_stderr(err):
             code = main([
-                "scan", "https://mcp.example.com/mcp", "--token-a", "AAA",
+                "crosscheck", "https://mcp.example.com/mcp", "--token-a", "AAA",
                 "--plant-tool", "kv_set", "--read-tool", "kv_get",
             ])
         self.assertEqual(code, 3)
@@ -172,7 +172,7 @@ class ScanOverHTTPTests(unittest.TestCase):
         # Nothing could be observed (connection refused on a closed local
         # port) -> INCONCLUSIVE, exit 2.
         code, _ = self._run([
-            "scan", "http://127.0.0.1:1/mcp", "--token-a", "AAA",
+            "crosscheck", "http://127.0.0.1:1/mcp", "--token-a", "AAA",
             "--plant-tool", "kv_set", "--read-tool", "kv_get",
         ])
         self.assertEqual(code, 2)

@@ -1,0 +1,699 @@
+{
+  "gateway": "agentgateway",
+  "gateway_version": "1.7.0",
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "deeper_mode": "login_faults",
+  "gateway_config_path": "integration/agentgateway/xid10-login-faults.yaml",
+  "gateway_config_sha256": "d1ac61597b4235a1aa25c569d7320eb279e7debddc9208e751547dbb472d8113",
+  "gateway_run_config": "# XID-10 deeper scenario \"login server misbehaves\": the delegation config with\n# the token exchange pointed at the FAULTY token endpoint (placeholder\n# 127.0.0.1:4676, set from TOKEN_ENDPOINT_HOST). Inbound JWKS stays on the AS.\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:4631\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 4630\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: only users of the local AS, audience agentgateway-api.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:4690/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:4682/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:4676\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Delegation: the calling agent presents its own client-credentials\n              # token in x-actor-token. agentgateway cannot mint an actor token\n              # itself; the source must be a request location.\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4690",
+    "agw_url": "http://127.0.0.1:4630/mcp",
+    "agw_admin_port": 4631,
+    "upstream_port": 4682,
+    "fault_port": 4676,
+    "fixture_ports": [
+      4677,
+      4680
+    ]
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [
+      "agent-client",
+      "other-agent"
+    ],
+    "lax_subject_issuer": false
+  },
+  "probe": "login_faults",
+  "modes": {
+    "http_500": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-http_500-1d3ff27852ef",
+        "probe": "st-probe-http_500-1cef5ea2a258",
+        "fx_ctl": "st-fx_ctl-http_500-db67b40f4b2b",
+        "fx_probe": "st-fx_probe-http_500-d3c1a4dc7409"
+      },
+      "control": {
+        "user": "lf-ctl-http_500",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+          "elapsed_s": 0.03
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-http_500-1d3ff27852ef",
+            "token": "sha256:1c4c601e3d1d",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-http_500",
+            "issuer": "https://local-as.test",
+            "actor": "agent-client",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-http_500",
+        "caller": {
+          "succeeded": false,
+          "detail": "HTTPTransportError: HTTP 502 from http://127.0.0.1:4630/mcp: backend authentication failed",
+          "elapsed_s": 0.0
+        },
+        "caller_elapsed_s": 0.0,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 1,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.05
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.0
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-http_500-d3c1a4dc7409",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "unreachable": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first (attempts not observable: nothing was listening)",
+      "nonces": {
+        "ctl": "st-ctl-unreachable-142d8c98e5f2",
+        "probe": "st-probe-unreachable-f052640827ec",
+        "fx_ctl": "st-fx_ctl-unreachable-ff28e92f6541",
+        "fx_probe": "st-fx_probe-unreachable-5127dfb60e98"
+      },
+      "control": {
+        "user": "lf-ctl-unreachable",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+          "elapsed_s": 0.03
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-unreachable-142d8c98e5f2",
+            "token": "sha256:1f9233cd108a",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-unreachable",
+            "issuer": "https://local-as.test",
+            "actor": "agent-client",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-unreachable",
+        "caller": {
+          "succeeded": false,
+          "detail": "HTTPTransportError: HTTP 502 from http://127.0.0.1:4630/mcp: backend authentication failed",
+          "elapsed_s": 0.0
+        },
+        "caller_elapsed_s": 0.0,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": null,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.04
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.0
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-unreachable-5127dfb60e98",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "slow": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-slow-a89fedca0b66",
+        "probe": "st-probe-slow-0bc3c6c3f634",
+        "fx_ctl": "st-fx_ctl-slow-3392d3149406",
+        "fx_probe": "st-fx_probe-slow-c2512f996733"
+      },
+      "control": {
+        "user": "lf-ctl-slow",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+          "elapsed_s": 0.05
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-slow-a89fedca0b66",
+            "token": "sha256:286f192ace96",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-slow",
+            "issuer": "https://local-as.test",
+            "actor": "agent-client",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-slow",
+        "caller": {
+          "succeeded": false,
+          "detail": "HTTPTransportError: HTTP 502 from http://127.0.0.1:4630/mcp: backend authentication failed",
+          "elapsed_s": 10.0
+        },
+        "caller_elapsed_s": 10.0,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 1,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.05
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 10.01
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-slow-c2512f996733",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "malformed_not_json": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-malformed_not_json-b1b8be44b585",
+        "probe": "st-probe-malformed_not_json-29d4af5da03a",
+        "fx_ctl": "st-fx_ctl-malformed_not_json-a417f344316a",
+        "fx_probe": "st-fx_probe-malformed_not_json-8fe3accb200f"
+      },
+      "control": {
+        "user": "lf-ctl-malformed_not_json",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+          "elapsed_s": 0.04
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-malformed_not_json-b1b8be44b585",
+            "token": "sha256:2da1863a8aa2",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-malformed_not_json",
+            "issuer": "https://local-as.test",
+            "actor": "agent-client",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-malformed_not_json",
+        "caller": {
+          "succeeded": false,
+          "detail": "HTTPTransportError: HTTP 502 from http://127.0.0.1:4630/mcp: backend authentication failed",
+          "elapsed_s": 0.0
+        },
+        "caller_elapsed_s": 0.0,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 1,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.03
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.0
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-malformed_not_json-8fe3accb200f",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    },
+    "malformed_no_token": {
+      "grade": "OK",
+      "label": "fails_closed",
+      "reason": "nothing with the probe's nonce reached the upstream and the caller got an error; the control reached it authenticated first",
+      "nonces": {
+        "ctl": "st-ctl-malformed_no_token-abaee990a957",
+        "probe": "st-probe-malformed_no_token-b0c8580e4922",
+        "fx_ctl": "st-fx_ctl-malformed_no_token-ae7d36d4721d",
+        "fx_probe": "st-fx_probe-malformed_no_token-f8a7ea3d879f"
+      },
+      "control": {
+        "user": "lf-ctl-malformed_no_token",
+        "caller": {
+          "succeeded": true,
+          "detail": "{\"resultType\": \"complete\", \"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+          "elapsed_s": 0.05
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-ctl-malformed_no_token-abaee990a957",
+            "token": "sha256:4d5b1384105d",
+            "token_kind": "exchanged",
+            "parsed": true,
+            "subject": "lf-ctl-malformed_no_token",
+            "issuer": "https://local-as.test",
+            "actor": "agent-client",
+            "parse_error": null
+          }
+        ]
+      },
+      "probe": {
+        "user": "lf-p-malformed_no_token",
+        "caller": {
+          "succeeded": false,
+          "detail": "HTTPTransportError: HTTP 502 from http://127.0.0.1:4630/mcp: backend authentication failed",
+          "elapsed_s": 0.0
+        },
+        "caller_elapsed_s": 0.0,
+        "upstream_calls": [],
+        "reached_upstream": false,
+        "reached_without_authorization": false
+      },
+      "login_server_hits_in_fault": 1,
+      "unattributed_calls_in_window": [],
+      "broken_fixture": {
+        "name": "fall-through deputy (forwards with no Authorization when the exchange fails in any way)",
+        "grade": "FAIL",
+        "label": "forwarded_unauthenticated",
+        "reason": "1 upstream call(s) with the probe's nonce arrived with no Authorization header while the login server was failing",
+        "control": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.05
+        },
+        "probe": {
+          "succeeded": true,
+          "detail": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false, \"resultType\": \"complete\"}",
+          "elapsed_s": 0.0
+        },
+        "upstream_calls": [
+          {
+            "method": "tools/call",
+            "nonce": "st-fx_probe-malformed_no_token-f8a7ea3d879f",
+            "token": "",
+            "token_kind": "none",
+            "parsed": false,
+            "subject": null,
+            "issuer": null,
+            "actor": null,
+            "parse_error": "Not enough segments"
+          }
+        ]
+      }
+    }
+  },
+  "grade": "OK",
+  "token_endpoint_requests": [
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "http_500",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "http_500",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "slow",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": "delivered",
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "slow",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": "delivered",
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_not_json",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_not_json",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_no_token",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "actor_token",
+        "actor_token_type",
+        "audience",
+        "grant_type",
+        "scope",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "forward",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    },
+    {
+      "state": "malformed_no_token",
+      "grant_type": "urn:ietf:params:oauth:grant-type:token-exchange",
+      "param_names": [
+        "audience",
+        "grant_type",
+        "subject_token",
+        "subject_token_type"
+      ],
+      "basic_auth": false,
+      "slow_reply": null,
+      "reply": null
+    }
+  ],
+  "slow_seconds": 45.0,
+  "caller_timeout_s": 120,
+  "gateway_token_endpoint_timeout": "10 s default (crates/agentgateway/src/http/auth/oauth/transport.rs DEFAULT_TOKEN_ENDPOINT_TIMEOUT)",
+  "users": "fresh user per control and per probe, per mode (no cached exchange)"
+}

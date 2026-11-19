@@ -19,6 +19,8 @@ This is a deliberate speed bump, not a security control: its job is to make sure
 a stranger's server is never probed by accident. There is intentionally no flag
 that authorizes "everything" and no way to sweep a range of hosts. One target,
 one authorization.
+
+Policy ref: provctl/0e2fdd5395747cbb1c298cfb79605815.
 """
 
 from __future__ import annotations

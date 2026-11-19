@@ -1,0 +1,15 @@
+# LiteLLM 1.109.1 config for the XID-10 gate. Loopback only; the driver
+# (integration/xid10_litellm_gate.py) substitutes {{UPSTREAM_URL}},
+# {{TOKEN_ENDPOINT}}, {{CLIENT_SECRET}} and {{STATIC_TOKEN}} into a temp copy.
+# The master key comes from the environment (a throwaway generated per run).
+model_list: []
+litellm_settings:
+  telemetry: false
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+mcp_servers:
+  notes:
+    url: {{UPSTREAM_URL}}
+    transport: http
+    # BROKEN on purpose: forward the caller's own token (no exchange).
+    auth_type: true_passthrough

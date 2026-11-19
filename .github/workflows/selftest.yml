@@ -1,0 +1,111 @@
+name: selftest
+
+# Runs the unit tests, then runs this repository's own GitHub Action against the
+# bundled practice servers on the runner's loopback. Nothing leaves the runner.
+
+on:
+  push:
+    branches: [next, main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  unit:
+    # Pinned: the newest runner image no longer offers Python 3.9, the oldest
+    # version this package supports.
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Unit tests (standard library only)
+        run: python -m unittest discover
+
+  action:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Start the practice servers (loopback)
+        run: |
+          STRANGERTEST_MODE=leaky STRANGERTEST_PORT=4610 python -m strangertest.practice_statehandle_http &
+          STRANGERTEST_MODE=safe  STRANGERTEST_PORT=4611 python -m strangertest.practice_statehandle_http &
+          STRANGERTEST_MODE=safe  STRANGERTEST_PORT=4612 python -m strangertest.practice_http &
+          for port in 4610 4611 4612; do
+            for _ in $(seq 1 50); do
+              if (echo > "/dev/tcp/127.0.0.1/$port") 2>/dev/null; then break; fi
+              sleep 0.2
+            done
+            (echo > "/dev/tcp/127.0.0.1/$port") 2>/dev/null || { echo "port $port never opened"; exit 1; }
+          done
+
+      # A leaky server must fail the gate.
+      - name: confirm against the leaky server (expected to fail)
+        id: leaky
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: confirm
+          test: state-handle
+          url: http://127.0.0.1:4610/mcp
+          token-a: alice
+          token-b: bob
+
+      # A safe server must pass.
+      - name: confirm against the safe server
+        id: safe
+        uses: ./
+        with:
+          mode: confirm
+          test: state-handle
+          url: http://127.0.0.1:4611/mcp
+          token-a: alice
+          token-b: bob
+
+      # Scan in report-only mode and write SARIF.
+      - name: scan the plain practice server
+        id: scan
+        uses: ./
+        with:
+          url: http://127.0.0.1:4612/mcp
+          sarif-file: stranger-test.sarif
+          fail-on: never
+
+      # An unreachable target must fail the gate: nothing was scanned.
+      - name: scan a closed port (expected to fail)
+        id: closed
+        continue-on-error: true
+        uses: ./
+        with:
+          url: http://127.0.0.1:4699/mcp
+
+      - name: Check the four results
+        env:
+          LEAKY_OUTCOME: ${{ steps.leaky.outcome }}
+          LEAKY_CODE: ${{ steps.leaky.outputs.exit-code }}
+          SAFE_CODE: ${{ steps.safe.outputs.exit-code }}
+          SCAN_CODE: ${{ steps.scan.outputs.exit-code }}
+          CLOSED_OUTCOME: ${{ steps.closed.outcome }}
+          CLOSED_CODE: ${{ steps.closed.outputs.exit-code }}
+        run: |
+          fail=0
+          check() { if [ "$2" != "$3" ]; then echo "FAIL: $1 is '$2', expected '$3'"; fail=1; else echo "ok: $1 = $2"; fi; }
+          check "leaky outcome" "$LEAKY_OUTCOME" "failure"
+          check "leaky exit-code" "$LEAKY_CODE" "1"
+          check "safe exit-code" "$SAFE_CODE" "0"
+          check "closed-port outcome" "$CLOSED_OUTCOME" "failure"
+          check "closed-port exit-code" "$CLOSED_CODE" "2"
+          case "$SCAN_CODE" in 0|1) echo "ok: scan exit-code = $SCAN_CODE" ;; *) echo "FAIL: scan exit-code is '$SCAN_CODE'"; fail=1 ;; esac
+          grep -q '"version": "2.1.0"' stranger-test.sarif || { echo "FAIL: SARIF file missing or not 2.1.0"; fail=1; }
+          exit $fail

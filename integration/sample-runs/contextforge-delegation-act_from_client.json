@@ -1,0 +1,100 @@
+{
+  "probe": "xid10-delegation",
+  "mode": "delegation",
+  "trigger": "tool",
+  "gateway": "ContextForge",
+  "gateway_version": "1.1.1",
+  "authorization_note": "external users granted tools.execute via a team-scoped developer role (not admin)",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": true,
+    "audience_correct": true,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": false,
+  "failures": [],
+  "summary": "OK: delegation preserved subject and actor, used the correct audience and a narrowed scope, and minted a distinct token per principal.",
+  "a_first_eq_a_third_token": true,
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": "forge",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:c16e9b7b100d",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    },
+    {
+      "subject": "bob",
+      "actor": "forge",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:cb1a1ff038e6",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    },
+    {
+      "subject": "alice",
+      "actor": "forge",
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:c16e9b7b100d",
+      "issuer": "https://local-as.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    }
+  ],
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4590",
+    "cf_url": "http://127.0.0.1:4544",
+    "upstream_port": 4580
+  },
+  "login_server": {
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested",
+    "client_auth": "none",
+    "act_from_client": true,
+    "clients": [
+      "forge",
+      "litellm-gw"
+    ]
+  },
+  "as_act_from_client": true,
+  "exchanges_client_auth": [
+    {
+      "seq": 1,
+      "subject_sub": "alice",
+      "actor_present": true,
+      "client_auth_method": "client_secret_post",
+      "client_id": "forge",
+      "client_valid": true,
+      "act_source": "actor_token",
+      "outcome": "granted"
+    },
+    {
+      "seq": 2,
+      "subject_sub": "bob",
+      "actor_present": true,
+      "client_auth_method": "client_secret_post",
+      "client_id": "forge",
+      "client_valid": true,
+      "act_source": "actor_token",
+      "outcome": "granted"
+    }
+  ]
+}

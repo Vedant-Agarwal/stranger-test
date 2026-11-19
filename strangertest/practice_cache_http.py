@@ -1,4 +1,4 @@
-"""LOCAL practice setup for the private-cached-results probe (CoSAI 3.2.7).
+"""LOCAL practice setup for the private-cached-results probe (CoSAI MCP Security v2.0 3.3.2 Tool output: Cacheable result handling; see also 3.2.7).
 
 Two single-process HTTP servers that speak just enough 2026-07-28 MCP
 (``resources/read``) over plain JSON:

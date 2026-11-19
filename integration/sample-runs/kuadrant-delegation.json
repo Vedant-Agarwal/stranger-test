@@ -1,0 +1,109 @@
+{
+  "gateway": "kuadrant",
+  "gateway_label": "Kuadrant 1.6.0 Authorino token exchange (sample policy, minimally adapted) on a direct route; the mcp router/broker was not in the path",
+  "gateway_version": "Kuadrant operator 1.6.0 (Authorino v0.28.0, mcp-controller v1.0.2)",
+  "mode_note": "option (b): Authorino exchange on a direct HTTPRoute; mcp router/broker not in path",
+  "install": "kind st-kuadrant; Istio 1.27.0; Gateway API v1.4.1; Kuadrant 1.6.0 (Helm); loopback only",
+  "authpolicy": "integration/kuadrant/kuadrant-mcps-auth-policy.yaml (sample, minimally adapted)",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4610",
+    "gw_url": "http://127.0.0.1:18080/",
+    "as": 4610,
+    "upstream": 4612,
+    "fixture_base": 4620
+  },
+  "caller_auth": "Authorization: Bearer <user JWT (openid scope)>; x-mcp-servername set by the driver",
+  "probe": "xid10-delegation",
+  "mode": "delegation",
+  "trigger": "tool",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": false,
+    "audience_correct": true,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": true,
+  "failures": [
+    "actor_present"
+  ],
+  "summary": "LEAK: delegation integrity failed (actor_present) between 'A' and 'B' \u2014 impersonation: the exchanged token carries no acting-agent ('act') claim, so the agent acting for the user is invisible.",
+  "check_grades": {
+    "subject_preserved": "OK",
+    "actor_present": "FAIL",
+    "audience_correct": "OK",
+    "scope_narrowed": "OK",
+    "no_token_reuse": "OK",
+    "no_cross_identity_bleed": "OK"
+  },
+  "broken_fixtures_in_run": {
+    "fixtures": {
+      "safe": [],
+      "static_credential": [
+        "subject_preserved",
+        "actor_present",
+        "audience_correct",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ],
+      "token_passthrough": [
+        "actor_present",
+        "audience_correct"
+      ],
+      "cached_token_reuse": [
+        "subject_preserved",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ],
+      "scope_escalation": [
+        "scope_narrowed"
+      ]
+    },
+    "controls": [
+      "safe"
+    ]
+  },
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "svc1",
+      "scope": "openid",
+      "token": "sha256:722c5ed3abe1",
+      "issuer": "http://host.docker.internal:4610",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    },
+    {
+      "subject": "bob",
+      "actor": null,
+      "audience": "svc1",
+      "scope": "openid",
+      "token": "sha256:e9998934a19e",
+      "issuer": "http://host.docker.internal:4610",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    },
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "svc1",
+      "scope": "openid",
+      "token": "sha256:0968037532d1",
+      "issuer": "http://host.docker.internal:4610",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    }
+  ],
+  "exchange_audience": "svc1",
+  "driver_set_x_mcp_servername": "svc1",
+  "x_mcp_servername_note": "set by this driver as the mcp router would; client-supplied values of this header are NOT graded or reported",
+  "actor_source": "none: Authorino sends no actor_token on the exchange (impersonation)"
+}

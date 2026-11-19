@@ -34,9 +34,10 @@ Repository = "https://github.com/Vedant-Agarwal/stranger-test"
 
 [project.scripts]
 strangertest = "strangertest.cli:main"
+stranger-test = "strangertest.cli:main"
 
 [tool.setuptools]
-packages = ["strangertest"]
+packages = ["strangertest", "strangertest.scan"]
 
 [tool.setuptools.dynamic]
 version = { attr = "strangertest.__version__" }

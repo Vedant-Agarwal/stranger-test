@@ -1,0 +1,73 @@
+{
+  "gateway": "kuadrant",
+  "gateway_label": "Kuadrant 1.6.0 Authorino token exchange (sample policy, minimally adapted) on a direct route; the mcp router/broker was not in the path",
+  "gateway_version": "Kuadrant operator 1.6.0 (Authorino v0.28.0, mcp-controller v1.0.2)",
+  "mode_note": "option (b): Authorino exchange on a direct HTTPRoute; mcp router/broker not in path",
+  "install": "kind st-kuadrant; Istio 1.27.0; Gateway API v1.4.1; Kuadrant 1.6.0 (Helm); loopback only",
+  "authpolicy": "integration/kuadrant/kuadrant-mcps-auth-policy.yaml (sample, minimally adapted)",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4610",
+    "gw_url": "http://127.0.0.1:18080/",
+    "as": 4610,
+    "upstream": 4612,
+    "fixture_base": 4620
+  },
+  "caller_auth": "Authorization: Bearer <user JWT (openid scope)>; x-mcp-servername set by the driver",
+  "probe": "exchange_fail",
+  "grade": "OK",
+  "label": "fails_closed",
+  "reason": "nothing reached the upstream while the exchange failed; the caller got an error; the control reached it first",
+  "control": {
+    "reached_upstream": true,
+    "caller": {
+      "result": "{\"content\": [{\"type\": \"text\", \"text\": \"ok\"}], \"isError\": false}",
+      "is_error": false
+    }
+  },
+  "modes": {
+    "http_500": {
+      "caller": {
+        "error": "HTTP 403 from http://127.0.0.1:18080/: {\n  \"error\": \"Forbidden\",\n  \"message\": \"MCP Tool Access denied: Insufficient permissions for this tool.\"\n}\n",
+        "is_error": true
+      },
+      "reached_upstream": false,
+      "user_token_reached_upstream": false,
+      "upstream_calls": []
+    },
+    "bad_body": {
+      "caller": {
+        "error": "HTTP 403 from http://127.0.0.1:18080/: {\n  \"error\": \"Forbidden\",\n  \"message\": \"MCP Tool Access denied: Insufficient permissions for this tool.\"\n}\n",
+        "is_error": true
+      },
+      "reached_upstream": false,
+      "user_token_reached_upstream": false,
+      "upstream_calls": []
+    },
+    "no_token": {
+      "caller": {
+        "error": "HTTP 403 from http://127.0.0.1:18080/: {\n  \"error\": \"Forbidden\",\n  \"message\": \"MCP Tool Access denied: Insufficient permissions for this tool.\"\n}\n",
+        "is_error": true
+      },
+      "reached_upstream": false,
+      "user_token_reached_upstream": false,
+      "upstream_calls": []
+    },
+    "slow": {
+      "caller": {
+        "error": "HTTP 500 from http://127.0.0.1:18080/: Internal Server Error.\n",
+        "is_error": true
+      },
+      "reached_upstream": false,
+      "user_token_reached_upstream": false,
+      "upstream_calls": []
+    }
+  },
+  "user_token_reached_upstream_any_mode": false,
+  "note": "a user token with aud != server needs the exchange; on exchange failure the gateway must fail closed. (A token with aud == server is a separate, by-design no-exchange pass-through \u2014 see notes/kuadrant-aud-passthrough.md \u2014 not an exchange-failure case, so it is not exercised here.)",
+  "broken_fixture": {
+    "name": "fall-through deputy (forwards with no auth on exchange failure)",
+    "grade": "FAIL",
+    "reason": "a request made while the exchange failed reached the upstream"
+  },
+  "driver_set_x_mcp_servername": "svc1"
+}

@@ -1,0 +1,76 @@
+name: "Stranger Test"
+description: "Test an MCP server for cross-user authorization leaks: a read-only scan, or a two-identity confirm."
+author: "Vedant Agarwal"
+branding:
+  icon: "shield"
+  color: "blue"
+
+inputs:
+  url:
+    description: "MCP endpoint to test, e.g. http://127.0.0.1:8080/mcp. Only servers you run or are authorized to test."
+    required: true
+  mode:
+    description: "scan (read-only, one identity) or confirm (two identities)."
+    required: false
+    default: "scan"
+  test:
+    description: "confirm only: the deep test to run (state-handle, tasks-idor, elicitation). See `stranger-test confirm --list`."
+    required: false
+    default: ""
+  token-a:
+    description: "confirm only: bearer token for identity A. Pass a secret."
+    required: false
+    default: ""
+  token-b:
+    description: "confirm only: bearer token for identity B. Pass a secret."
+    required: false
+    default: ""
+  bearer:
+    description: "scan only: optional bearer token to scan as an authenticated caller. Pass a secret."
+    required: false
+    default: ""
+  sarif-file:
+    description: "scan only: also write a SARIF 2.1.0 log to this path (upload it with github/codeql-action/upload-sarif)."
+    required: false
+    default: ""
+  allow-nonloopback:
+    description: "'true' to permit a non-loopback target. Only for a server you are authorized to test."
+    required: false
+    default: "false"
+  fail-on:
+    description: "leak (fail on a risk signal or LEAK), inconclusive (also fail when the test could not tell), or never."
+    required: false
+    default: "leak"
+  python-version:
+    description: "Python used to run the tool (3.9+)."
+    required: false
+    default: "3.12"
+
+outputs:
+  exit-code:
+    description: "The tool's own exit code. scan: 0 none, 1 signal, 2 unreachable. confirm: 0 OK, 1 LEAK, 2 inconclusive, 3 usage."
+    value: ${{ steps.run.outputs.exit-code }}
+
+runs:
+  using: "composite"
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: ${{ inputs.python-version }}
+    - name: Install stranger-test (this action's own version)
+      shell: bash
+      run: python -m pip install --quiet "$GITHUB_ACTION_PATH"
+    - name: Run stranger-test
+      id: run
+      shell: bash
+      env:
+        ST_MODE: ${{ inputs.mode }}
+        ST_URL: ${{ inputs.url }}
+        ST_TEST: ${{ inputs.test }}
+        ST_TOKEN_A: ${{ inputs.token-a }}
+        ST_TOKEN_B: ${{ inputs.token-b }}
+        ST_BEARER: ${{ inputs.bearer }}
+        ST_SARIF_FILE: ${{ inputs.sarif-file }}
+        ST_ALLOW_NONLOOPBACK: ${{ inputs.allow-nonloopback }}
+        ST_FAIL_ON: ${{ inputs.fail-on }}
+      run: bash "$GITHUB_ACTION_PATH/ci/action_run.sh"

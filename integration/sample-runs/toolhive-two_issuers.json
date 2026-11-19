@@ -1,0 +1,157 @@
+{
+  "gateway": "toolhive",
+  "gateway_label": "Stacklok ToolHive (standalone proxy)",
+  "gateway_version": "0.65.0",
+  "gateway_versions": {
+    "raw": "ToolHive v0.65.0\nCommit: 2cf07aa23a97b8541f8cad6365cedc479d69c250\nBuilt: 2026-11-13 11:26:46 UTC\nGo version: go1.27.4\nPlatform: darwin/arm64",
+    "version": "0.65.0",
+    "commit": "2cf07aa23a97b8541f8cad6365cedc479d69c250"
+  },
+  "gateway_mode": "standalone (thv run <remote-url>)",
+  "install": "release binary thv v0.65.0 (Apache-2.0), sha256-verified, loopback only",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4610",
+    "as": 4610,
+    "proxy": 4613,
+    "upstream": 4612,
+    "fixture_base": 4620
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [],
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "as_act_from_client": false,
+  "client_transport": "HTTPTransport (legacy Streamable HTTP)",
+  "caller_auth": "Authorization: Bearer <user JWT> (ToolHive validates it: incoming OIDC with --oidc-issuer/--oidc-jwks-url/--oidc-audience, --jwks-allow-private-ip + --oidc-insecure-allow-http for the loopback AS)",
+  "token_exchange": "RFC 8693 to the local AS; client auth client_secret_basic; the exchanged token replaces Authorization upstream",
+  "dev_flags": {
+    "flags": [
+      "--jwks-allow-private-ip",
+      "--oidc-insecure-allow-http"
+    ],
+    "why": "needed ONLY because the login server (local_as) is on localhost over HTTP: they relax ToolHive's refusal to fetch a JWKS/OIDC endpoint from a private/loopback IP over plain HTTP. They do NOT change the token-exchange or token-validation logic being tested \u2014 only where the keys are fetched from."
+  },
+  "docs": {
+    "backend_auth": "https://docs.stacklok.com/toolhive/concepts/backend-auth",
+    "token_exchange": "https://docs.stacklok.com/toolhive/guides-cli/token-exchange",
+    "vmcp_auth": "https://docs.stacklok.com/toolhive/guides-vmcp/authentication"
+  },
+  "gateway_cli": [
+    "run",
+    "http://127.0.0.1:4612",
+    "--name",
+    "xid10th-918d22",
+    "--transport",
+    "streamable-http",
+    "--proxy-port",
+    "4613",
+    "--host",
+    "127.0.0.1",
+    "--oidc-issuer",
+    "https://provx.test",
+    "--oidc-jwks-url",
+    "http://127.0.0.1:4610/jwks/provx",
+    "--oidc-audience",
+    "toolhive-api",
+    "--jwks-allow-private-ip",
+    "--oidc-insecure-allow-http",
+    "--token-exchange-url",
+    "http://127.0.0.1:4610/token",
+    "--token-exchange-audience",
+    "https://upstream.test/mcp",
+    "--token-exchange-client-id",
+    "toolhive-gw",
+    "--token-exchange-client-secret",
+    "<client-secret>",
+    "--token-exchange-subject-token-type",
+    "access_token",
+    "--token-exchange-scopes",
+    "read:notes"
+  ],
+  "client_secret": "sha256:47cab52d2c16",
+  "startup_probe": {
+    "gateway_startup_requests_no_auth": [
+      {
+        "method": null,
+        "authorization": null,
+        "mcp_protocol_version": null
+      },
+      {
+        "method": "initialize",
+        "authorization": null,
+        "mcp_protocol_version": null
+      },
+      {
+        "method": null,
+        "authorization": null,
+        "mcp_protocol_version": null
+      },
+      {
+        "method": null,
+        "authorization": null,
+        "mcp_protocol_version": null
+      }
+    ],
+    "driver_readiness_requests_authed": [
+      {
+        "method": "initialize",
+        "authorization": "sha256:90d03f9e650a",
+        "mcp_protocol_version": null
+      },
+      {
+        "method": "notifications/initialized",
+        "authorization": "sha256:c7a2d9c38500",
+        "mcp_protocol_version": null
+      }
+    ],
+    "note": "ToolHive makes an unauthenticated initialize probe to the target at workload startup (gateway_startup_requests_no_auth); this driver then issues one authenticated readiness probe to wait for the JWKS fetch (driver_readiness_requests_authed). BOTH are excluded from grading, which uses only per-nonce / per-identity caller traffic."
+  },
+  "probe": "xid10-delegation",
+  "mode": "two_issuers",
+  "grade": "INCONCLUSIVE",
+  "vulnerable": null,
+  "inconclusive_reason": "HTTP 401 from http://127.0.0.1:4613/mcp: {\"error\":\"invalid_token\",\"error_description\":\"Invalid token: failed to parse token: token is unverifiable: error while executing keyfunc: key ID 41a29ca797dc3e2a not found in JWKS\"}",
+  "why": "ToolHive validates the inbound issuer and binds to ONE configured OIDC issuer (provx). The second issuer (provy) is rejected at the gateway with HTTP 401 before any token exchange, so the two same-named-user/two-issuer conflation this probe looks for cannot occur. The rejection is the safe outcome; see the inbound_validation observation row.",
+  "broken_fixtures_in_run": {
+    "fixtures": {
+      "safe": [],
+      "static_credential": [
+        "subject_preserved",
+        "actor_present",
+        "audience_correct",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ],
+      "token_passthrough": [
+        "actor_present",
+        "audience_correct"
+      ],
+      "cached_token_reuse": [
+        "subject_preserved",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ],
+      "scope_escalation": [
+        "scope_narrowed"
+      ],
+      "two_issuers (safe)": [],
+      "conflated_issuer": [
+        "subject_preserved",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ]
+    },
+    "controls": [
+      "safe",
+      "two_issuers (safe)"
+    ],
+    "note": "thin-deputy fixtures run in this run for the record"
+  }
+}

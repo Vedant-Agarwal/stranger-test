@@ -1,0 +1,112 @@
+apiVersion: kuadrant.io/v1
+kind: AuthPolicy
+metadata:
+  name: mcps-auth-policy
+  namespace: gateway-system
+spec:
+  targetRef:
+    group: gateway.networking.k8s.io
+    kind: Gateway
+    name: mcp-gateway
+    sectionName: mcps
+  rules:
+    authentication: #validates the token
+      'keycloak':
+        jwt:
+          issuerUrl: https://keycloak.127-0-0-1.sslip.io:8002/realms/mcp
+    metadata:
+      vault:
+        http:
+          urlExpression: |
+            "http://vault.vault.svc.cluster.local:8200/v1/secret/data/" + auth.identity.preferred_username + "/" + request.headers['x-mcp-servername'].replace("/", ".")
+          method: GET
+          credentials:
+            customHeader:
+              name: X-Vault-Token
+          sharedSecretRef:
+            name: token-exchange
+            key: vault-token
+        priority: 0
+      oauth-token-exchange:
+        when:
+          - predicate: "!has(auth.metadata.vault.data) || !has(auth.metadata.vault.data.data) || !has(auth.metadata.vault.data.data.token) || type(auth.metadata.vault.data.data.token) != string"
+          - predicate: type(auth.identity.aud) != string || auth.identity.aud != request.headers['x-mcp-servername']
+        http:
+          url: https://keycloak.127-0-0-1.sslip.io:8002/realms/mcp/protocol/openid-connect/token
+          method: POST
+          credentials:
+            authorizationHeader:
+              prefix: Basic
+          sharedSecretRef:
+            name: token-exchange
+            key: oauth-client-basic-auth
+          bodyParameters:
+            grant_type:
+              value: urn:ietf:params:oauth:grant-type:token-exchange
+            subject_token:
+              expression: request.headers['authorization'].split('Bearer ')[1] # remove "Bearer "
+            subject_token_type:
+              value: urn:ietf:params:oauth:token-type:access_token
+            audience:
+              expression: request.headers['x-mcp-servername']
+            scope:
+              value: openid
+        priority: 1
+    authorization:
+      'token':
+        opa:
+          rego: |
+            scoped_jwt := object.get(object.get(object.get(input.auth, "metadata", {}), "oauth-token-exchange", {}), "access_token", "")
+            jwt := j { scoped_jwt != ""; j := scoped_jwt }
+            jwt := j { scoped_jwt == ""; j := split(input.request.headers["authorization"], "Bearer ")[1] }
+            claims := c { [_, c, _] := io.jwt.decode(jwt) }
+            allow = true
+          allValues: true
+        priority: 0
+      'scoped-audience-check':
+        when:
+          - predicate: "!has(auth.metadata.vault.data) || !has(auth.metadata.vault.data.data) || !has(auth.metadata.vault.data.data.token) || type(auth.metadata.vault.data.data.token) != string"
+        patternMatching:
+          patterns:
+            - predicate: has(auth.authorization.token.claims.aud) && type(auth.authorization.token.claims.aud) == string && auth.authorization.token.claims.aud == request.headers['x-mcp-servername']
+        priority: 1
+      'tool-access-check':
+        when:
+          - predicate: "request.headers.exists(h, h == 'x-mcp-toolname')"
+        patternMatching:
+          patterns:
+            - predicate: |
+                ('tool:' + request.headers['x-mcp-toolname']) in (has(auth.authorization.token.claims.resource_access) && auth.authorization.token.claims.resource_access.exists(p, p == request.headers['x-mcp-servername']) ? auth.authorization.token.claims.resource_access[request.headers['x-mcp-servername']].roles : [])
+        priority: 1
+      'prompt-access-check':
+        when:
+          - predicate: "request.headers.exists(h, h == 'x-mcp-promptname')"
+        patternMatching:
+          patterns:
+            - predicate: |
+                ('prompt:' + request.headers['x-mcp-promptname']) in (has(auth.authorization.token.claims.resource_access) && auth.authorization.token.claims.resource_access.exists(p, p == request.headers['x-mcp-servername']) ? auth.authorization.token.claims.resource_access[request.headers['x-mcp-servername']].roles : [])
+        priority: 1
+    response:
+      success:
+        headers:
+          authorization:
+            plain:
+              expression: |
+                "Bearer " + ((has(auth.metadata.vault.data) && has(auth.metadata.vault.data.data) && has(auth.metadata.vault.data.data.token) && type(auth.metadata.vault.data.data.token) == string) ? auth.metadata.vault.data.data.token : auth.authorization.token.jwt)
+      unauthenticated:
+        headers:
+          'WWW-Authenticate':
+            value: Bearer resource_metadata=http://mcp.127-0-0-1.sslip.io:8001/.well-known/oauth-protected-resource/mcp
+        body:
+          value: |
+            {
+              "error": "Unauthorized",
+              "message": "MCP Tool Access denied: Authentication required."
+            }
+      unauthorized:
+        body:
+          value: |
+            {
+              "error": "Forbidden",
+              "message": "MCP Tool Access denied: Insufficient permissions for this tool."
+            }

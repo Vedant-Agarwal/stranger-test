@@ -1,0 +1,27 @@
+# LiteLLM config for the CVE-2026-59822 regression gate (FIXED versions only).
+#
+# A single NON-oauth2 MCP server (auth_type: none). On a FIXED LiteLLM
+# (>= 1.84.0, PR #26463) the MCP endpoint's anonymous fallback runs only when
+# EVERY target server is auth_type=oauth2; for a non-oauth2 server a request
+# whose bearer fails LiteLLM key validation is rejected (the auth error is
+# re-raised), never admitted with an anonymous session. This config exercises
+# that path: invalid / garbage / forged / absent bearer -> no session; a valid
+# LiteLLM key (Authorization: Bearer <master key>) -> session established.
+#
+# Loopback only; the driver (integration/xid10_litellm_cve59822_gate.py)
+# substitutes {{UPSTREAM_URL}} into a temp copy and supplies the master key via
+# the environment (a throwaway generated per run). This tests PATCHED behaviour
+# only -- no affected (< 1.84.0) version is ever installed or run.
+model_list: []
+litellm_settings:
+  telemetry: false
+general_settings:
+  master_key: os.environ/LITELLM_MASTER_KEY
+mcp_servers:
+  notes:
+    url: {{UPSTREAM_URL}}
+    transport: http
+    # Non-oauth2 (auth_type: none): the gateway requires a valid LiteLLM
+    # admission credential; it does NOT fall back to an anonymous session when
+    # the bearer cannot be validated.
+    auth_type: none

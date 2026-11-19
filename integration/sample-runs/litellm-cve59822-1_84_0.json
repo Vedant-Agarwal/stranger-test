@@ -1,0 +1,113 @@
+{
+  "cve": "CVE-2026-59822",
+  "advisory": "https://github.com/BerriAI/litellm/security/advisories/GHSA-7488-6r32-c95q",
+  "fix_pr": "https://github.com/BerriAI/litellm/pull/26463",
+  "probe": "litellm-cve59822-inbound-auth",
+  "scope": "patched behaviour only; no affected (< 1.84.0) version installed or run",
+  "gateway": "litellm",
+  "gateway_version": "1.84.0",
+  "gateway_versions": {
+    "litellm": "1.84.0",
+    "mcp": "1.26.0",
+    "litellm_dist_record_sha256": "a6ffe9d0d3f4697c82acb2501ef9ff4e7409f1188d43d9411addd1931a029672",
+    "license": "MIT"
+  },
+  "first_fixed_version": "1.84.0",
+  "install": "pip litellm[proxy]==1.84.0 in a throwaway python3.11 venv (open-source build, no licence key, no database)",
+  "endpoint": "http://127.0.0.1:4551/mcp/notes",
+  "mcp_endpoint_form": "/mcp/notes (per-server path form)",
+  "fix_summary": "PR #26463 tightened MCPRequestHandler.process_mcp_request: the anonymous fallback on a failed Authorization-key validation runs only when every target server is auth_type=oauth2; for a non-oauth2 server the auth error is re-raised and the request is rejected",
+  "server_auth_type": "none (non-oauth2)",
+  "protocol_version": "2025-11-25",
+  "cases": {
+    "no_bearer": {
+      "credential": "none",
+      "status": 500,
+      "www_authenticate": null,
+      "session_established": false,
+      "response_body": "{\"error\":\"MCP request failed\",\"details\":\"\"}"
+    },
+    "garbage_bearer": {
+      "credential": "garbage string (not a key)",
+      "status": 500,
+      "www_authenticate": null,
+      "session_established": false,
+      "response_body": "{\"error\":\"MCP request failed\",\"details\":\"\"}"
+    },
+    "forged_bearer": {
+      "credential": "well-formed RS256 JWT signed by an untrusted key [sha256:dec121975ccb]",
+      "status": 500,
+      "www_authenticate": null,
+      "session_established": false,
+      "response_body": "{\"error\":\"MCP request failed\",\"details\":\"\"}"
+    },
+    "valid_bearer": {
+      "credential": "valid LiteLLM master key [sha256:27cc88337f1f]",
+      "status": 200,
+      "www_authenticate": null,
+      "session_established": true,
+      "response_body": "event: message\r\ndata: {\"jsonrpc\":\"2.0\",\"id\":1,\"result\":{\"protocolVersion\":\"2025-11-25\",\"capabilities\":{\"experimental\":{},\"prompts\":{\"listChanged\":false},\"resources\":{\"subscribe\":false,\"listChanged\":false},\"tools\":{\"listChanged\":false}},\"serverInfo\":{\"name\":\"litellm-mcp-server\",\"version\":\"1.0.0\"}}}\r\n\r\n"
+    }
+  },
+  "session_established_rule": "HTTP 200 and an initialize JSON-RPC result (protocolVersion)",
+  "result": {
+    "status": "PASS",
+    "grade": "PASS",
+    "reason": "invalid/forged/absent bearer rejected (no session); valid bearer accepted; the fail-open fixture was caught by the same check",
+    "invalid_rejected": true,
+    "valid_accepted": true,
+    "invalid_cases_establishing_a_session": [],
+    "upstream_reached_for_invalid": false
+  },
+  "broken_fixture_in_run": {
+    "name": "fail-open deputy (grants a session to any/no bearer)",
+    "caught": true,
+    "fixture_cases": {
+      "no_bearer": {
+        "credential": "none",
+        "status": 200,
+        "www_authenticate": null,
+        "session_established": true,
+        "response_body": "{\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"protocolVersion\": \"2025-11-25\", \"capabilities\": {\"tools\": {}}, \"serverInfo\": {\"name\": \"fail-open\", \"version\": \"0\"}}}"
+      },
+      "garbage_bearer": {
+        "credential": "garbage string (not a key)",
+        "status": 200,
+        "www_authenticate": null,
+        "session_established": true,
+        "response_body": "{\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"protocolVersion\": \"2025-11-25\", \"capabilities\": {\"tools\": {}}, \"serverInfo\": {\"name\": \"fail-open\", \"version\": \"0\"}}}"
+      },
+      "forged_bearer": {
+        "credential": "well-formed RS256 JWT signed by an untrusted key [sha256:dec121975ccb]",
+        "status": 200,
+        "www_authenticate": null,
+        "session_established": true,
+        "response_body": "{\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"protocolVersion\": \"2025-11-25\", \"capabilities\": {\"tools\": {}}, \"serverInfo\": {\"name\": \"fail-open\", \"version\": \"0\"}}}"
+      },
+      "valid_bearer": {
+        "credential": "valid LiteLLM master key [sha256:27cc88337f1f]",
+        "status": 200,
+        "www_authenticate": null,
+        "session_established": true,
+        "response_body": "{\"jsonrpc\": \"2.0\", \"id\": 1, \"result\": {\"protocolVersion\": \"2025-11-25\", \"capabilities\": {\"tools\": {}}, \"serverInfo\": {\"name\": \"fail-open\", \"version\": \"0\"}}}"
+      }
+    },
+    "note": "the invalid-rejected conclusion is trusted only because this fail-open fixture, checked the same way, established sessions for the invalid bearers (i.e. the check can catch a fail-open)"
+  },
+  "upstream_methods_seen": [
+    {
+      "method": "initialize"
+    },
+    {
+      "method": "notifications/initialized"
+    },
+    {
+      "method": "tools/list"
+    }
+  ],
+  "gateway_config_path": "integration/litellm/cve59822-default-auth.yaml",
+  "gateway_config_sha256": "5c54abf3f7c4403761d41fa914569c5c2d882c03bb5b40d23d052341a10f1195",
+  "gateway_run_config": "# LiteLLM config for the CVE-2026-59822 regression gate (FIXED versions only).\n#\n# A single NON-oauth2 MCP server (auth_type: none). On a FIXED LiteLLM\n# (>= 1.84.0, PR #26463) the MCP endpoint's anonymous fallback runs only when\n# EVERY target server is auth_type=oauth2; for a non-oauth2 server a request\n# whose bearer fails LiteLLM key validation is rejected (the auth error is\n# re-raised), never admitted with an anonymous session. This config exercises\n# that path: invalid / garbage / forged / absent bearer -> no session; a valid\n# LiteLLM key (Authorization: Bearer <master key>) -> session established.\n#\n# Loopback only; the driver (integration/xid10_litellm_cve59822_gate.py)\n# substitutes http://127.0.0.1:4553/mcp into a temp copy and supplies the master key via\n# the environment (a throwaway generated per run). This tests PATCHED behaviour\n# only -- no affected (< 1.84.0) version is ever installed or run.\nmodel_list: []\nlitellm_settings:\n  telemetry: false\ngeneral_settings:\n  master_key: os.environ/LITELLM_MASTER_KEY\nmcp_servers:\n  notes:\n    url: http://127.0.0.1:4553/mcp\n    transport: http\n    # Non-oauth2 (auth_type: none): the gateway requires a valid LiteLLM\n    # admission credential; it does NOT fall back to an anonymous session when\n    # the bearer cannot be validated.\n    auth_type: none\n",
+  "gateway_run_config_sha256": "323dfa22b2486e403ddfcfe04778d6c05127e7129d3efe96318e61424a5ef38f",
+  "master_key": "sha256:27cc88337f1f"
+}

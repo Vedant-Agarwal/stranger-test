@@ -1,4 +1,4 @@
-"""The private-cached-results probe (CoSAI MCP Security v2.0, 3.2.7).
+"""The private-cached-results probe (CoSAI MCP Security v2.0, 3.3.2 Tool output: Cacheable result handling; see also 3.2.7).
 
 MCP 2026-07-28 results of ``resources/read`` carry ``cacheScope`` ("public" or
 "private") and ``ttlMs``. A "private" result "MUST NOT be shared across

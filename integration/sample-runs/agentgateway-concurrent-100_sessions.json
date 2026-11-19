@@ -1,0 +1,1585 @@
+{
+  "gateway": "agentgateway",
+  "gateway_version": "1.7.0",
+  "gateway_version_full": {
+    "version": "1.7.0",
+    "git_revision": "26f5aebe99a36a037fe54f8080a608aca5547e15",
+    "rust_version": "1.99.0",
+    "build_profile": "release",
+    "build_target": "aarch64-apple-darwin",
+    "crypto_backend": "aws-lc-rs",
+    "crypto_fips": false
+  },
+  "deeper_mode": "concurrent",
+  "gateway_config_path": "integration/agentgateway/xid10-delegation.yaml",
+  "gateway_config_sha256": "432bd9050560b95efd91e1416e938f4158b13942e393d142ac195aae1a41fdc1",
+  "gateway_run_config": "# XID-10 gate: agentgateway as the deputy under test (RFC 8693 DELEGATION).\n#\n# Everything is loopback-only. agentgateway binds all interfaces by default, so\n# every listener (gateway, admin, stats, readiness) is pinned to 127.0.0.1.\n#   client --(user JWT + x-actor-token)--> agentgateway :3790\n#   agentgateway --(token exchange)--> local_as :8790/token\n#   agentgateway --(exchanged token)--> recording upstream :18790/mcp\nconfig:\n  adminAddr: 127.0.0.1:4631\n  statsAddr: \"off\"\n  readinessAddr: \"off\"\ngateways:\n  xid10:\n    port: 4630\n    bindAddress: 127.0.0.1\nroutes:\n- name: xid10-mcp\n  gateways: xid10\n  policies:\n    # Inbound: only users of the local AS, audience agentgateway-api.\n    jwtAuth:\n      mode: strict\n      providers:\n      - issuer: https://local-as.test\n        audiences: [agentgateway-api]\n        jwks:\n          url: http://127.0.0.1:4690/jwks\n  backends:\n  - mcp:\n      statefulMode: stateful\n      targets:\n      - name: upstream\n        mcp:\n          host: http://127.0.0.1:4682/mcp\n        policies:\n          backendAuth:\n            oauthTokenExchange:\n              host: 127.0.0.1:4690\n              path: /token\n              # The validated inbound user JWT is the subject token (jwtAuth\n              # strips the Authorization header unless preserveToken is set).\n              subjectToken:\n                source:\n                  expression: jwt.rawToken.unredacted()\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              # Delegation: the calling agent presents its own client-credentials\n              # token in x-actor-token. agentgateway cannot mint an actor token\n              # itself; the source must be a request location.\n              actorToken:\n                source:\n                  header:\n                    name: x-actor-token\n                tokenType: urn:ietf:params:oauth:token-type:jwt\n              audiences: [https://upstream.test/mcp]\n              scopes: [read:notes]\n",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4690",
+    "agw_url": "http://127.0.0.1:4630/mcp",
+    "agw_admin_port": 4631,
+    "upstream_port": 4682,
+    "fault_port": 4676,
+    "fixture_ports": [
+      4677,
+      4680
+    ]
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [
+      "agent-client",
+      "other-agent"
+    ],
+    "lax_subject_issuer": false
+  },
+  "probe": "concurrent_identities",
+  "grade": "OK",
+  "label": "isolated",
+  "reason": "100 interleaved requests each got only their own marker and reached the upstream as their own caller; up to 44 upstream calls overlapped",
+  "pairs": 50,
+  "max_inflight": 44,
+  "target": "http://127.0.0.1:4630/mcp",
+  "timing": {
+    "wall_seconds": 1.15,
+    "send_spread_seconds": 0.007
+  },
+  "requests": [
+    {
+      "label": "A",
+      "nonce": "st-cA-eb70e1ce78ed",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-281673410448",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-35153033e3c8",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-b533f939a636",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-96afbb802e38",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1f0687820283",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-5067a54cdb3f",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-e04e7e53ff25",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-ad97a624ae64",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-c11e87ba61af",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-1c271edbe605",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-b9d9f9f2c734",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-33a06b36167e",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-438e5d4b5be7",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-df6ea4fcedef",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-5afda9697dc6",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-f8cbcec7a3e9",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-f2342cd9480e",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-c5c1ae9e558c",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-0be90680edf4",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-6c1875e37813",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-7d48a07fffc0",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-70b9d20f063e",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-3393757616e7",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-c47e9a8ac57f",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-3b683fd7f573",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-3e9aca3c551d",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-8ce78b980d4a",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-14463b614c6d",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1bc53e0774fc",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-477714984e4e",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-3094391af089",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-a4258dedcf58",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-1ddd53948a73",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-2dd5e18927a3",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-b6ec17114c16",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-1905baae6e5d",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-e38742acbf23",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-3d0fac999720",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-7c6960511829",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-01aadbe925a3",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-b20b6cdfa79a",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-93ae28063123",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-2e3eb0ea3820",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-e2adcc64b167",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-369f74fa69a9",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-0616a2097874",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-66ee26bb4523",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-5ade5615bc8f",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-19992a1818cc",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-48a52d296d8a",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-80f85e347221",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-729898f12b47",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-baac9bbe1472",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-ed220c060726",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-03d7e2107077",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-7ccfd5b12373",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-49465232730f",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-59b7b8443a0c",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-0c2a98092a2a",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-dff46343a061",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-49a6790de092",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-a78802f86429",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-d4022334a330",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-c3ee8864d411",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-8dc9ce1d9f80",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-21b2c2e1bf96",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-7597ec53402f",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-a775ebd3fa17",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-761e9291c274",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-09a97cb021d7",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-d72e458c8566",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-9a5dbce347c5",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-5695c1e097d2",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-86caab946e3a",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-73eea440ba69",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-0ca2dacc0d0c",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-322cea43f9f2",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-d3516dbcc195",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-0a7464d82b8c",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-f8fadda599fa",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-2e4ca2e4b94f",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-5cfd159184a5",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-000b597743fc",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-95279adfce9a",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-f1b629dab85d",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-5ab5d5c1b6a7",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-0fadf35dd91d",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-2e399d54d51a",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-001dc91a8133",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-e55d6ad9c6a5",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-daee9a905989",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-ba7449a2f19d",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-5dc19aea705a",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-03c665cdb834",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-2c6a38aea084",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-124845c5a326",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-84b3206735bc",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    },
+    {
+      "label": "A",
+      "nonce": "st-cA-15d8fccd6b15",
+      "text": "note=mkA-60eb2007ff7c93b29c6704f3",
+      "error": null
+    },
+    {
+      "label": "B",
+      "nonce": "st-cB-4aa76f93eef3",
+      "text": "note=mkB-53611a74aedbc070211a3ba0",
+      "error": null
+    }
+  ],
+  "upstream_calls": [
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-48a52d296d8a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-95279adfce9a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-1c271edbe605",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-21b2c2e1bf96",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-df6ea4fcedef",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-2e399d54d51a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-c5c1ae9e558c",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-96afbb802e38",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-3d0fac999720",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-ed220c060726",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-c47e9a8ac57f",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-a4258dedcf58",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-e2adcc64b167",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-0ca2dacc0d0c",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-5ade5615bc8f",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-a78802f86429",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-2dd5e18927a3",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-35153033e3c8",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-70b9d20f063e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-a775ebd3fa17",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-59b7b8443a0c",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-eb70e1ce78ed",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-f8fadda599fa",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-3e9aca3c551d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-ba7449a2f19d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-dff46343a061",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-5067a54cdb3f",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-5ab5d5c1b6a7",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-729898f12b47",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-c3ee8864d411",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-ad97a624ae64",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-0616a2097874",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-6c1875e37813",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-f8cbcec7a3e9",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-477714984e4e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-33a06b36167e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-1905baae6e5d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-09a97cb021d7",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-14463b614c6d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-124845c5a326",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-01aadbe925a3",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-9a5dbce347c5",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-5cfd159184a5",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-15d8fccd6b15",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-e55d6ad9c6a5",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-93ae28063123",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-7ccfd5b12373",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-d3516dbcc195",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-86caab946e3a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-d72e458c8566",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-66ee26bb4523",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-7597ec53402f",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cA-03c665cdb834",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "alice",
+      "actor": "agent-client",
+      "token": "sha256:449adb09b3c1"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1bc53e0774fc",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-5695c1e097d2",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-8ce78b980d4a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-000b597743fc",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-f1b629dab85d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-b20b6cdfa79a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-2e3eb0ea3820",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-8dc9ce1d9f80",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-b9d9f9f2c734",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-19992a1818cc",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-73eea440ba69",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-84b3206735bc",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-daee9a905989",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-3094391af089",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-2e4ca2e4b94f",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-3b683fd7f573",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-281673410448",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-49465232730f",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-4aa76f93eef3",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-7c6960511829",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-369f74fa69a9",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-438e5d4b5be7",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-c11e87ba61af",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-e04e7e53ff25",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1ddd53948a73",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-3393757616e7",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-e38742acbf23",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-d4022334a330",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-0be90680edf4",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-5dc19aea705a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-5afda9697dc6",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-03d7e2107077",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-80f85e347221",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-f2342cd9480e",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-1f0687820283",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-0c2a98092a2a",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-7d48a07fffc0",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-761e9291c274",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-0fadf35dd91d",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-b6ec17114c16",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-baac9bbe1472",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-49a6790de092",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-322cea43f9f2",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-b533f939a636",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-2c6a38aea084",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-001dc91a8133",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    },
+    {
+      "method": "tools/call",
+      "nonce": "st-cB-0a7464d82b8c",
+      "parsed": true,
+      "issuer": "https://local-as.test",
+      "subject": "bob",
+      "actor": "agent-client",
+      "token": "sha256:7116b79bd146"
+    }
+  ],
+  "upstream_hold_seconds": 0.05,
+  "distinct_upstream_tokens_per_subject": {
+    "alice": 1,
+    "bob": 1
+  },
+  "markers": {
+    "A": "mkA-60eb...",
+    "B": "mkB-5361..."
+  },
+  "broken_fixture": {
+    "name": "racy practice deputy (per-user state in one shared slot)",
+    "pairs": 50,
+    "racy": {
+      "serial_vulnerable": false,
+      "serial_failures": [],
+      "concurrent_grade": "FAIL",
+      "concurrent_label": "cross_identity_response",
+      "concurrent_reason": "50 response(s) carried the other user's marker (first: B's request got A's marker)",
+      "max_inflight": 100
+    },
+    "safe": {
+      "serial_vulnerable": false,
+      "serial_failures": [],
+      "concurrent_grade": "INCONCLUSIVE",
+      "concurrent_label": "inconclusive",
+      "concurrent_reason": "the leaky fixture was not shown, in this run, to FAIL this probe while passing the one-at-a-time probe",
+      "max_inflight": 100
+    },
+    "concurrent_grade": "FAIL",
+    "serial_vulnerable": false,
+    "safe_concurrent_not_fail": true,
+    "proven": true
+  }
+}

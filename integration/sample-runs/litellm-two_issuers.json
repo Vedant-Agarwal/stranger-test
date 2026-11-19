@@ -1,0 +1,195 @@
+{
+  "gateway": "litellm",
+  "gateway_label": "an LLM gateway with MCP features",
+  "gateway_version": "1.109.1",
+  "gateway_versions": {
+    "litellm": "1.109.1",
+    "mcp": "2.3.0",
+    "litellm_dist_record_sha256": "c2eeb7e5480be96e5281f4613bc92895151fcba8b7e29605c255da076d98b697",
+    "license": "MIT"
+  },
+  "install": "pip litellm[proxy]==1.109.1 in its own venv (open-source build, no licence key, no database)",
+  "endpoints": {
+    "as_base": "http://127.0.0.1:4590",
+    "as": 4590,
+    "litellm": 4500,
+    "upstream": 4580,
+    "fixture_base": 4560
+  },
+  "login_server": {
+    "client_auth": "none",
+    "act_from_client": false,
+    "clients": [],
+    "lax_subject_issuer": false,
+    "providers": {
+      "provx": "https://provx.test",
+      "provy": "https://provy.test"
+    },
+    "scope_cap": "requested \u2229 subject; subject's scope if none requested"
+  },
+  "as_act_from_client": false,
+  "client_transport": "HTTPTransport (legacy Streamable HTTP); MCPClient asks for 2026-07-28, LiteLLM answers with its default set",
+  "upstream_protocol_version": "2025-11-25 (the upstream answers initialize with the requested legacy version; LiteLLM 1.109.1 advertises 2024-11-05..2025-11-25 by default)",
+  "caller_auth": "x-litellm-api-key: throwaway master key; Authorization: Bearer <user JWT>",
+  "docs": {
+    "mcp_overview": "https://docs.litellm.ai/docs/mcp",
+    "token_exchange": "https://docs.litellm.ai/docs/mcp_obo_auth",
+    "passthrough": "https://docs.litellm.ai/docs/mcp_oauth_passthrough"
+  },
+  "gateway_config_path": "integration/litellm/xid10-token-exchange.yaml",
+  "gateway_config_sha256": "3ea0d7b404ca452fdf8c338b461a5c703879273a1bc9e2aabdb11f0ec81f6d9b",
+  "gateway_run_config": "# LiteLLM 1.109.1 config for the XID-10 gate. Loopback only; the driver\n# (integration/xid10_litellm_gate.py) substitutes http://127.0.0.1:4580/mcp,\n# http://127.0.0.1:4590/token, sha256:273f426206c4 and {{STATIC_TOKEN}} into a temp copy.\n# The master key comes from the environment (a throwaway generated per run).\nmodel_list: []\nlitellm_settings:\n  telemetry: false\ngeneral_settings:\n  master_key: os.environ/LITELLM_MASTER_KEY\nmcp_servers:\n  notes:\n    url: http://127.0.0.1:4580/mcp\n    transport: http\n    auth_type: oauth2_token_exchange\n    token_exchange_endpoint: http://127.0.0.1:4590/token\n    client_id: litellm-gw\n    client_secret: sha256:273f426206c4\n    audience: https://upstream.test/mcp\n    subject_token_type: urn:ietf:params:oauth:token-type:jwt\n    token_exchange_profile: rfc8693\n    scopes: [\"read:notes\"]\n",
+  "gateway_run_config_sha256": "a4d49d30e4c6aaae2df708a74d624742e2d61d96e2ccc09bb0ce7b6cc30c8445",
+  "master_key": "sha256:8c8794e773fa",
+  "probe": "xid10-delegation",
+  "mode": "two_issuers",
+  "trigger": "tool",
+  "checks": {
+    "subject_preserved": true,
+    "actor_present": false,
+    "audience_correct": true,
+    "scope_narrowed": true,
+    "no_token_reuse": true,
+    "no_cross_identity_bleed": true
+  },
+  "vulnerable": true,
+  "failures": [
+    "actor_present"
+  ],
+  "summary": "LEAK: delegation integrity failed (actor_present) between 'A' and 'B' \u2014 impersonation: the exchanged token carries no acting-agent ('act') claim, so the agent acting for the user is invisible.",
+  "check_grades": {
+    "subject_preserved": "OK",
+    "actor_present": "FAIL",
+    "audience_correct": "OK",
+    "scope_narrowed": "OK",
+    "no_token_reuse": "OK",
+    "no_cross_identity_bleed": "OK"
+  },
+  "broken_fixtures_in_run": {
+    "fixtures": {
+      "safe": [],
+      "static_credential": [
+        "subject_preserved",
+        "actor_present",
+        "audience_correct",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ],
+      "token_passthrough": [
+        "actor_present",
+        "audience_correct"
+      ],
+      "cached_token_reuse": [
+        "subject_preserved",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ],
+      "scope_escalation": [
+        "scope_narrowed"
+      ],
+      "two_issuers (safe)": [],
+      "conflated_issuer": [
+        "subject_preserved",
+        "no_token_reuse",
+        "no_cross_identity_bleed"
+      ]
+    },
+    "controls": [
+      "safe",
+      "two_issuers (safe)"
+    ],
+    "note": "thin-deputy fixtures (integration/xid10_thin_deputy_gate.py) run in this run; a check is graded OK only if one of them failed it"
+  },
+  "a_first_eq_a_third_token": true,
+  "recorded_calls": [
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:caab402560c5",
+      "issuer": "https://provx.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    },
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:ce499361ea15",
+      "issuer": "https://provy.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    },
+    {
+      "subject": "alice",
+      "actor": null,
+      "audience": "https://upstream.test/mcp",
+      "scope": "read:notes",
+      "token": "sha256:caab402560c5",
+      "issuer": "https://provx.test",
+      "parsed": true,
+      "parse_error": null,
+      "method": "tools/call",
+      "nonce": null
+    }
+  ],
+  "exchanges_client_auth": [
+    {
+      "seq": 5,
+      "subject_sub": "alice",
+      "subject_iss": "https://provx.test",
+      "actor_present": false,
+      "requested_scope": "read:notes",
+      "requested_audience": "https://upstream.test/mcp",
+      "client_auth_method": "client_secret_post",
+      "client_id": "litellm-gw",
+      "client_valid": null,
+      "act_source": null,
+      "outcome": "granted"
+    },
+    {
+      "seq": 6,
+      "subject_sub": "alice",
+      "subject_iss": "https://provy.test",
+      "actor_present": false,
+      "requested_scope": "read:notes",
+      "requested_audience": "https://upstream.test/mcp",
+      "client_auth_method": "client_secret_post",
+      "client_id": "litellm-gw",
+      "client_valid": null,
+      "act_source": null,
+      "outcome": "granted"
+    }
+  ],
+  "litellm_sent_client_credentials": [
+    "client_secret_post"
+  ],
+  "actor_source": "none configured: LiteLLM's RFC 8693 form has no actor_token; act, if any, comes from the login server's act_from_client mode",
+  "client_negotiated_version": "2025-11-25",
+  "upstream_init_versions": [
+    {
+      "requested": "2025-11-25",
+      "answered": "2025-11-25"
+    },
+    {
+      "requested": "2025-11-25",
+      "answered": "2025-11-25"
+    },
+    {
+      "requested": "2025-11-25",
+      "answered": "2025-11-25"
+    }
+  ],
+  "upstream_protocol_version_headers": [
+    "2025-11-25",
+    "None"
+  ],
+  "litellm_key_reached_upstream": false,
+  "user_token_reached_upstream": false
+}
