@@ -1,5 +1,5 @@
 name: "Stranger Test"
-description: "Test an MCP server for cross-user authorization leaks: a read-only scan, or a two-identity confirm."
+description: "Test an MCP server or a LangGraph agent server for cross-user leaks: a read-only scan, or a two-identity confirm."
 author: "Vedant Agarwal"
 branding:
   icon: "shield"
@@ -7,14 +7,14 @@ branding:
 
 inputs:
   url:
-    description: "MCP endpoint to test, e.g. http://127.0.0.1:8080/mcp. Only servers you run or are authorized to test."
+    description: "Endpoint to test, e.g. http://127.0.0.1:8080/mcp. For agent-memory, the agent server's base URL, e.g. http://127.0.0.1:2024. Only servers you run or are authorized to test."
     required: true
   mode:
     description: "scan (read-only, one identity) or confirm (two identities)."
     required: false
     default: "scan"
   test:
-    description: "confirm only: the deep test to run (state-handle, tasks-idor, elicitation). See `stranger-test confirm --list`."
+    description: "confirm only: the deep test to run (state-handle, tasks-idor, elicitation, agent-memory). See `stranger-test confirm --list`."
     required: false
     default: ""
   token-a:
@@ -23,6 +23,30 @@ inputs:
     default: ""
   token-b:
     description: "confirm only: bearer token for identity B. Pass a secret."
+    required: false
+    default: ""
+  namespace-a:
+    description: "agent-memory only: a Store namespace identity A may write to, dotted (e.g. alice.notes)."
+    required: false
+    default: ""
+  namespace-b:
+    description: "agent-memory only: identity B's own Store namespace, dotted. With prefix-sibling ids (ali / alice) this also checks the namespace boundary."
+    required: false
+    default: ""
+  assistant:
+    description: "agent-memory only: assistant (graph) id to run, for the through-the-agent paths."
+    required: false
+    default: ""
+  save-input:
+    description: "agent-memory only: JSON run input that makes the agent save; {marker} is replaced."
+    required: false
+    default: ""
+  recall-input:
+    description: "agent-memory only: JSON run input that makes the agent recall; must not contain {marker}."
+    required: false
+    default: ""
+  whoami-field:
+    description: "agent-memory only: field of the run output that carries the caller's identity, if any."
     required: false
     default: ""
   bearer:
@@ -69,6 +93,12 @@ runs:
         ST_TEST: ${{ inputs.test }}
         ST_TOKEN_A: ${{ inputs.token-a }}
         ST_TOKEN_B: ${{ inputs.token-b }}
+        ST_NAMESPACE_A: ${{ inputs.namespace-a }}
+        ST_NAMESPACE_B: ${{ inputs.namespace-b }}
+        ST_ASSISTANT: ${{ inputs.assistant }}
+        ST_SAVE_INPUT: ${{ inputs.save-input }}
+        ST_RECALL_INPUT: ${{ inputs.recall-input }}
+        ST_WHOAMI_FIELD: ${{ inputs.whoami-field }}
         ST_BEARER: ${{ inputs.bearer }}
         ST_SARIF_FILE: ${{ inputs.sarif-file }}
         ST_ALLOW_NONLOOPBACK: ${{ inputs.allow-nonloopback }}

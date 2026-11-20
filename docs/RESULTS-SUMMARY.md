@@ -44,7 +44,7 @@ Notes that change how a cell should be read:
 | `elicitation` | none recorded here yet |
 | `confused-deputy` | lab test; see the thin-deputy fixtures in the full results |
 | `subscriptions` | lab test; see the XID-13 gate in the full results |
-| `agent-memory` | **LangGraph dev server (1.2.24) on its SQLite store, sample app with handlers on: `LEAK` on `langgraph-checkpoint-sqlite` 3.1.0, `OK` on 3.1.1**, with prefix-sibling users (`integration/langgraph/real_server_store_gate.py`). Reproduces the fixed, public CVE-2026-71433. |
+| `agent-memory` | **LangGraph dev server (1.2.24), sample app with handlers on, prefix-sibling users: `LEAK` on store 3.1.0 and `OK` on 3.1.1, for both `langgraph-checkpoint-sqlite` and `langgraph-checkpoint-postgres` (PostgreSQL 16)** (`integration/langgraph/real_server_store_gate.py`). Reproduces the fixed, public CVE-2026-71433. |
 
 Each catches its bundled leaky server and clears its safe one
 (`stranger-test confirm <test> --demo`).

@@ -222,7 +222,17 @@ permitted the test. There is deliberately no "scan everything" mode: one target,
 one authorization. Any real finding is for **private, responsible disclosure**
 to the server's owner. Do not name-and-shame.
 
-## What's new in 0.3.1
+## What's new in 0.3.2
+
+- **The GitHub Action runs `agent-memory`.** New inputs `namespace-a`,
+  `namespace-b`, `assistant`, `save-input`, `recall-input` and `whoami-field`;
+  see [docs/CI.md](docs/CI.md).
+- **Verified on the Postgres store too.** Through a real LangGraph dev server on
+  PostgreSQL 16, `agent-memory` grades `LEAK` on `langgraph-checkpoint-postgres`
+  3.1.0 and `OK` on 3.1.1, the same as on SQLite. The gate takes
+  `ST_STORE_KIND=postgres` and refuses a database that is not empty.
+
+### 0.3.1
 
 - **Name for the failure:** an *agent memory spill* is one user of an agent app
   reading memory stored for another user because a per-user access check is

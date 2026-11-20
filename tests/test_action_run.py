@@ -131,5 +131,53 @@ class ActionRunScan(unittest.TestCase):
         self.assertEqual(code, 0, out)
 
 
+@unittest.skipUnless(BASH, "bash not available")
+class ActionRunAgentMemory(unittest.TestCase):
+    """The agent-memory test through the action's runner, against the bundled
+    stand-in agent server. Its URL is the server's base URL, not an MCP path."""
+
+    AGENT = dict(ST_ASSISTANT="memory",
+                 ST_SAVE_INPUT='{"action": "save", "key": "st-probe", "value": "{marker}"}',
+                 ST_RECALL_INPUT='{"action": "recall", "key": "st-probe"}',
+                 ST_WHOAMI_FIELD="whoami")
+
+    def _run(self, mode, **env):
+        from strangertest.practice_agent_memory_http import build_server
+        with _serving(lambda p: build_server(mode, port=p)) as mcp_url:
+            base = mcp_url[: -len("/mcp")]
+            options = dict(ST_MODE="confirm", ST_TEST="agent-memory", ST_URL=base,
+                           ST_TOKEN_A="tok-alice", ST_TOKEN_B="tok-bob")
+            options.update(env)
+            return _run(**options)
+
+    def test_leaky_agent_server_fails_the_gate_with_two_tokens_only(self):
+        code, out = self._run("leaky")
+        self.assertEqual(code, 1, out)
+        self.assertIn("LEAK", out)
+
+    def test_safe_agent_server_passes_with_every_option(self):
+        code, out = self._run("safe", ST_NAMESPACE_A="alice.notes", **self.AGENT)
+        self.assertEqual(code, 0, out)
+        self.assertIn("agent_recall", out)
+        self.assertNotIn("NOT_RUN        agent_recall", out)
+
+    def test_namespace_b_reaches_the_tool(self):
+        code, out = self._run("prefixbug", ST_TOKEN_B="tok-ali",
+                              ST_NAMESPACE_A="alice.notes", ST_NAMESPACE_B="ali")
+        self.assertEqual(code, 1, out)
+        self.assertIn("LEAK           store_search_own_prefix", out)
+
+    def test_no_authentication_is_a_warning_not_a_pass_or_fail(self):
+        code, out = self._run("open")
+        self.assertEqual(code, 0, out)
+        self.assertIn("::warning::", out)
+        code, out = self._run("open", ST_FAIL_ON="inconclusive")
+        self.assertEqual(code, 1, out)
+
+    def test_bad_json_input_is_bad_input(self):
+        code, out = self._run("safe", ST_SAVE_INPUT="{not json")
+        self.assertEqual(code, 3, out)
+
+
 if __name__ == "__main__":
     unittest.main()

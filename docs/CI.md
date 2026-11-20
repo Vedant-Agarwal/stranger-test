@@ -48,6 +48,34 @@ Run one step per test. The two tokens must belong to two different users. If
 the server maps both to the same user, the test reports `OBSERVATION` instead of
 a leak, because reaching your own data is not a cross-user leak.
 
+## 3. Agent memory (LangGraph servers)
+
+`agent-memory` checks an agent server instead of an MCP server: can one user
+read memory stored for another (an agent memory spill)? Give the server's base
+URL, not an MCP path. Two tokens are enough to test the thread and Store paths:
+
+```yaml
+- uses: strangertest-labs/stranger-test@v0.3
+  with:
+    mode: confirm
+    test: agent-memory
+    url: http://127.0.0.1:2024
+    token-a: ${{ secrets.AGENT_TEST_TOKEN_A }}
+    token-b: ${{ secrets.AGENT_TEST_TOKEN_B }}
+    namespace-a: alice.notes      # a Store namespace user A may write to
+```
+
+To also test through the agent, add your graph's id and inputs:
+
+```yaml
+    assistant: my_graph
+    save-input: '{"messages": [{"role": "user", "content": "remember {marker}"}]}'
+    recall-input: '{"messages": [{"role": "user", "content": "what did I ask you to remember?"}]}'
+```
+
+`{marker}` is replaced by the test's own marker. See
+[AGENT-MEMORY.md](AGENT-MEMORY.md) for every option and how to read the result.
+
 ## What fails the step
 
 | Result | `fail-on: leak` (default) | `fail-on: inconclusive` | `fail-on: never` |
@@ -68,10 +96,13 @@ The tool's own exit code is available as the step output `exit-code`.
 
 | Input | Default | Meaning |
 |---|---|---|
-| `url` | (required) | The MCP endpoint to test. |
+| `url` | (required) | The MCP endpoint to test. For `agent-memory`, the agent server's base URL. |
 | `mode` | `scan` | `scan` or `confirm`. |
-| `test` | | `confirm` only: `state-handle`, `tasks-idor` or `elicitation`. |
+| `test` | | `confirm` only: `state-handle`, `tasks-idor`, `elicitation` or `agent-memory`. |
 | `token-a`, `token-b` | | `confirm` only: the two users' bearer tokens. |
+| `namespace-a`, `namespace-b` | | `agent-memory` only: Store namespaces, dotted. `namespace-b` with prefix-sibling ids also checks the namespace boundary. |
+| `assistant`, `save-input`, `recall-input` | | `agent-memory` only: graph id and JSON run inputs for the through-the-agent paths. |
+| `whoami-field` | | `agent-memory` only: run-output field that carries the caller's identity. |
 | `bearer` | | `scan` only: scan as an authenticated caller. |
 | `sarif-file` | | `scan` only: also write SARIF 2.1.0 here. |
 | `allow-nonloopback` | `false` | Permit a target that is not on loopback. Only for a server you are authorized to test. |

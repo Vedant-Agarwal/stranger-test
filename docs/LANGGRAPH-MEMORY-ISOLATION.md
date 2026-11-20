@@ -63,16 +63,17 @@ LangGraph dev server (LangGraph 1.2.23), with two fixed test users:
 
 The same check, through a real LangGraph dev server (LangGraph 1.2.24,
 langgraph-api 0.18.3) running the sample app with its handlers on, and with the
-server's Store set to LangGraph's own SQLite store. Only the store version
-changes. The two test users' ids are string-prefix siblings, `ali` and `alice`;
-`alice` saves an item, and `ali` searches his own namespace.
+server's Store set to LangGraph's own SQLite store, and then to its Postgres
+store (PostgreSQL 16, local). Only the store and its version change. The two
+test users' ids are string-prefix siblings, `ali` and `alice`; `alice` saves an
+item, and `ali` searches his own namespace.
 
-| `langgraph-checkpoint-sqlite` | Result |
-|---|---|
-| 3.1.0 (affected by CVE-2026-71433) | `LEAK`: `ali`'s own-namespace search returned `alice`'s item |
-| 3.1.1 (fixed) | `OK` |
+| Store package | 3.1.0 (affected by CVE-2026-71433) | 3.1.1 (fixed) |
+|---|---|---|
+| `langgraph-checkpoint-sqlite` | `LEAK`: `ali`'s own-namespace search returned `alice`'s item | `OK` |
+| `langgraph-checkpoint-postgres` | `LEAK`: same | `OK` |
 
-Every other exercised path was `OK` on both versions, because the app's own
+Every other exercised path was `OK` on every run, because the app's own
 checks blocked them. Reproduce with
 `integration/langgraph/real_server_store_gate.py` (through the server),
 `integration/langgraph/real_store_gate.py` (the store behind a minimal app), and
@@ -90,4 +91,6 @@ checks blocked them. Reproduce with
   is not a proof of isolation.
 - The store-boundary path needs two test accounts whose ids are prefix siblings.
 - It does not test leaks through semantic (similarity) search.
+- It was run against LangGraph's local dev server with the SQLite and Postgres
+  stores, not against LangGraph's hosted or self-hosted platform.
 - Run it only against servers you run or are authorized to test.

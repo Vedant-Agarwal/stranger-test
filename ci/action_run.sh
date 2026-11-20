@@ -4,9 +4,14 @@
 # into the command line by the workflow, so a token or URL cannot inject shell.
 #
 #   ST_MODE               scan | confirm                      (default: scan)
-#   ST_URL                MCP endpoint to test                (required)
+#   ST_URL                endpoint to test (agent-memory: the server's base URL) (required)
 #   ST_TEST               confirm only: which deep test       (e.g. state-handle)
 #   ST_TOKEN_A/ST_TOKEN_B confirm only: the two identities' bearer tokens
+#   ST_NAMESPACE_A/_B     agent-memory only: Store namespaces, dotted (alice.notes)
+#   ST_ASSISTANT          agent-memory only: assistant (graph) id to run
+#   ST_SAVE_INPUT         agent-memory only: JSON run input that saves; {marker} is replaced
+#   ST_RECALL_INPUT       agent-memory only: JSON run input that recalls
+#   ST_WHOAMI_FIELD       agent-memory only: run-output field carrying the caller's identity
 #   ST_BEARER             scan only: optional bearer token
 #   ST_SARIF_FILE         scan only: also write a SARIF 2.1.0 log to this path
 #   ST_ALLOW_NONLOOPBACK  "true" to permit a non-loopback target you may test
@@ -60,6 +65,13 @@ case "$mode" in
     args=(confirm "$ST_TEST" "$url")
     if [ -n "${ST_TOKEN_A:-}" ]; then args+=(--token-a "$ST_TOKEN_A"); fi
     if [ -n "${ST_TOKEN_B:-}" ]; then args+=(--token-b "$ST_TOKEN_B"); fi
+    # Options only the agent-memory test uses; other tests ignore them.
+    if [ -n "${ST_NAMESPACE_A:-}" ]; then args+=(--namespace-a "$ST_NAMESPACE_A"); fi
+    if [ -n "${ST_NAMESPACE_B:-}" ]; then args+=(--namespace-b "$ST_NAMESPACE_B"); fi
+    if [ -n "${ST_ASSISTANT:-}" ]; then args+=(--assistant "$ST_ASSISTANT"); fi
+    if [ -n "${ST_SAVE_INPUT:-}" ]; then args+=(--save-input "$ST_SAVE_INPUT"); fi
+    if [ -n "${ST_RECALL_INPUT:-}" ]; then args+=(--recall-input "$ST_RECALL_INPUT"); fi
+    if [ -n "${ST_WHOAMI_FIELD:-}" ]; then args+=(--whoami-field "$ST_WHOAMI_FIELD"); fi
     "${cmd[@]}" "${args[@]}" ${extra[@]+"${extra[@]}"} || code=$?
     # confirm: 0 OK, 1 LEAK/FAIL, 2 INCONCLUSIVE or OBSERVATION, 3 usage/refusal.
     ;;

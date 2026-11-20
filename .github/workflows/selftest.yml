@@ -42,7 +42,9 @@ jobs:
           STRANGERTEST_MODE=leaky STRANGERTEST_PORT=4610 python -m strangertest.practice_statehandle_http &
           STRANGERTEST_MODE=safe  STRANGERTEST_PORT=4611 python -m strangertest.practice_statehandle_http &
           STRANGERTEST_MODE=safe  STRANGERTEST_PORT=4612 python -m strangertest.practice_http &
-          for port in 4610 4611 4612; do
+          STRANGERTEST_MODE=leaky STRANGERTEST_PORT=4613 python -m strangertest.practice_agent_memory_http &
+          STRANGERTEST_MODE=safe  STRANGERTEST_PORT=4614 python -m strangertest.practice_agent_memory_http &
+          for port in 4610 4611 4612 4613 4614; do
             for _ in $(seq 1 50); do
               if (echo > "/dev/tcp/127.0.0.1/$port") 2>/dev/null; then break; fi
               sleep 0.2
@@ -90,7 +92,35 @@ jobs:
         with:
           url: http://127.0.0.1:4699/mcp
 
-      - name: Check the four results
+      # agent-memory: a leaky agent server must fail the gate with two tokens only.
+      - name: agent-memory against the leaky agent server (expected to fail)
+        id: mem_leaky
+        continue-on-error: true
+        uses: ./
+        with:
+          mode: confirm
+          test: agent-memory
+          url: http://127.0.0.1:4613
+          token-a: tok-alice
+          token-b: tok-bob
+
+      # agent-memory: a safe agent server must pass, with every option set.
+      - name: agent-memory against the safe agent server
+        id: mem_safe
+        uses: ./
+        with:
+          mode: confirm
+          test: agent-memory
+          url: http://127.0.0.1:4614
+          token-a: tok-alice
+          token-b: tok-bob
+          namespace-a: alice.notes
+          assistant: memory
+          save-input: '{"action": "save", "key": "st-probe", "value": "{marker}"}'
+          recall-input: '{"action": "recall", "key": "st-probe"}'
+          whoami-field: whoami
+
+      - name: Check the results
         env:
           LEAKY_OUTCOME: ${{ steps.leaky.outcome }}
           LEAKY_CODE: ${{ steps.leaky.outputs.exit-code }}
@@ -98,6 +128,9 @@ jobs:
           SCAN_CODE: ${{ steps.scan.outputs.exit-code }}
           CLOSED_OUTCOME: ${{ steps.closed.outcome }}
           CLOSED_CODE: ${{ steps.closed.outputs.exit-code }}
+          MEM_LEAKY_OUTCOME: ${{ steps.mem_leaky.outcome }}
+          MEM_LEAKY_CODE: ${{ steps.mem_leaky.outputs.exit-code }}
+          MEM_SAFE_CODE: ${{ steps.mem_safe.outputs.exit-code }}
         run: |
           fail=0
           check() { if [ "$2" != "$3" ]; then echo "FAIL: $1 is '$2', expected '$3'"; fail=1; else echo "ok: $1 = $2"; fi; }
@@ -106,6 +139,9 @@ jobs:
           check "safe exit-code" "$SAFE_CODE" "0"
           check "closed-port outcome" "$CLOSED_OUTCOME" "failure"
           check "closed-port exit-code" "$CLOSED_CODE" "2"
+          check "agent-memory leaky outcome" "$MEM_LEAKY_OUTCOME" "failure"
+          check "agent-memory leaky exit-code" "$MEM_LEAKY_CODE" "1"
+          check "agent-memory safe exit-code" "$MEM_SAFE_CODE" "0"
           case "$SCAN_CODE" in 0|1) echo "ok: scan exit-code = $SCAN_CODE" ;; *) echo "FAIL: scan exit-code is '$SCAN_CODE'"; fail=1 ;; esac
           grep -q '"version": "2.1.0"' stranger-test.sarif || { echo "FAIL: SARIF file missing or not 2.1.0"; fail=1; }
           exit $fail
