@@ -222,7 +222,18 @@ permitted the test. There is deliberately no "scan everything" mode: one target,
 one authorization. Any real finding is for **private, responsible disclosure**
 to the server's owner. Do not name-and-shame.
 
-## What's new in 0.3.0
+## What's new in 0.3.1
+
+- **Name for the failure:** an *agent memory spill* is one user of an agent app
+  reading memory stored for another user because a per-user access check is
+  missing or wrong. Defined in [docs/AGENT-MEMORY.md](docs/AGENT-MEMORY.md).
+- **Stronger evidence:** `agent-memory` now also runs through a real LangGraph
+  dev server whose Store is LangGraph's SQLite store
+  (`integration/langgraph/real_server_store_gate.py`): `LEAK` on
+  `langgraph-checkpoint-sqlite` 3.1.0, `OK` on 3.1.1. No change to the tool's
+  behaviour.
+
+### 0.3.0
 
 - **`confirm agent-memory`** — a sixth deep test, for **agent servers** rather
   than MCP servers: can identity B read what A saved in the agent's memory

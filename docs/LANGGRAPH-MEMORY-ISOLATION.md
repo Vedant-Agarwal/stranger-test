@@ -6,6 +6,12 @@ free check that acts as two users against a LangGraph server you run and reports
 whether one can read the other's memory. To run it, see
 [AGENT-MEMORY.md](AGENT-MEMORY.md).
 
+This page uses the term **agent memory spill** for that failure: one user of an
+agent app can read memory the app stored for another user, through the server's
+ordinary read paths, because a per-user access check is missing or wrong. It is
+a different problem from leaks through similarity search, where no access check
+fails and another user's memory is retrieved because it is semantically close.
+
 ## Why check at all
 
 In LangGraph, the server authenticates callers with the auth handler your app
@@ -55,10 +61,11 @@ LangGraph dev server (LangGraph 1.2.23), with two fixed test users:
 
 ## What it found on the affected and fixed store
 
-The same check, through a correct per-user app in front of the real
-`langgraph.store.sqlite.SqliteStore`. Only the store version changes. The two
-test users' ids are string-prefix siblings, `ali` and `alice`; `alice` saves an
-item, and `ali` searches his own namespace.
+The same check, through a real LangGraph dev server (LangGraph 1.2.24,
+langgraph-api 0.18.3) running the sample app with its handlers on, and with the
+server's Store set to LangGraph's own SQLite store. Only the store version
+changes. The two test users' ids are string-prefix siblings, `ali` and `alice`;
+`alice` saves an item, and `ali` searches his own namespace.
 
 | `langgraph-checkpoint-sqlite` | Result |
 |---|---|
@@ -66,8 +73,10 @@ item, and `ali` searches his own namespace.
 | 3.1.1 (fixed) | `OK` |
 
 Every other exercised path was `OK` on both versions, because the app's own
-checks blocked them. Reproduce with `integration/langgraph/real_store_gate.py`, and at the
-library level with `integration/langgraph/cve_2026_71433_store.py`.
+checks blocked them. Reproduce with
+`integration/langgraph/real_server_store_gate.py` (through the server),
+`integration/langgraph/real_store_gate.py` (the store behind a minimal app), and
+`integration/langgraph/cve_2026_71433_store.py` (the library alone).
 
 ## If you run LangGraph for more than one user
 

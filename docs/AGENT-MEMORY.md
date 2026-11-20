@@ -9,6 +9,10 @@ user B can read it back. In LangGraph, threads and Store items are only
 protected per user if the app adds its own authorization handlers, so a `LEAK`
 here normally means the app is missing them, not that the framework is broken.
 
+We call the failure an **agent memory spill**: one user of an agent app can read
+memory the app stored for another user, through the server's ordinary read
+paths, because a per-user access check is missing or wrong.
+
 ## 1. Try the demo (no setup)
 
 ```bash

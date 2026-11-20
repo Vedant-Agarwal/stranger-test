@@ -1,4 +1,7 @@
-"""Spike auth for a local LangGraph dev server. Two fixed test users.
+"""Sample auth for a local LangGraph dev server. Three fixed test users.
+
+``ali`` exists so that two ids are string-prefix siblings (``ali`` / ``alice``),
+which the Store namespace-boundary check needs.
 
 ST_SPIKE_MODE=leaky : authenticates callers but adds NO resource authorization
                       (the framework default when no @auth.on handler exists).
@@ -9,7 +12,7 @@ import os
 from langgraph_sdk import Auth
 
 MODE = os.environ.get("ST_SPIKE_MODE", "leaky")
-TOKENS = {"tok-alice": "alice", "tok-bob": "bob"}
+TOKENS = {"tok-alice": "alice", "tok-bob": "bob", "tok-ali": "ali"}
 
 auth = Auth()
 

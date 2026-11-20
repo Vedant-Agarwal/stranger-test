@@ -1,0 +1,6 @@
+{
+  "dependencies": ["."],
+  "graphs": {"memory": "./graph.py:graph"},
+  "auth": {"path": "./auth.py:auth"},
+  "store": {"path": "./store.py:create_store"}
+}
