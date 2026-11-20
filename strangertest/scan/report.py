@@ -318,7 +318,7 @@ def sarif_report(profile: Any, findings: Sequence[Any], *, version: str = "0.0.2
                 "tool": {
                     "driver": {
                         "name": "stranger-test",
-                        "informationUri": "https://github.com/Vedant-Agarwal/stranger-test",
+                        "informationUri": "https://github.com/strangertest-labs/stranger-test",
                         "version": version,
                         "rules": list(rules.values()),
                     }

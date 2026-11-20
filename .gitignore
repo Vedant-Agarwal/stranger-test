@@ -28,3 +28,6 @@ study/private/
 *.db
 # Gate run artifacts (written per run by the ContextForge gate).
 integration/runs/
+
+# LangGraph dev server cache (written when the agent-memory gate runs).
+.langgraph_api/

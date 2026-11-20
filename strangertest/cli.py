@@ -462,8 +462,20 @@ def cmd_confirm(args: argparse.Namespace) -> int:
     if not is_local_target(host):
         print("only run deep tests against servers you are authorized to test.", file=sys.stderr)
 
-    rep = t.run_target(args.url, args.token_a, args.token_b)
+    # Options only some tests use; each test ignores the ones it does not know.
+    opts = {name: getattr(args, name, None)
+            for name in ("namespace_a", "namespace_b", "assistant_id", "save_input",
+                         "recall_input", "whoami_field")}
+    try:
+        rep = t.run_target(args.url, args.token_a, args.token_b,
+                           **{k: v for k, v in opts.items() if v is not None})
+    except ValueError as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 3
     _confirm_print(rep, args.json)
+    hint = getattr(rep, "hint", None)
+    if not args.json and callable(hint) and hint():
+        print(hint())
     g = str(getattr(rep, "grade", "INCONCLUSIVE"))
     return 1 if g in ("LEAK", "FAIL") else (0 if g == "OK" else 2)
 
@@ -586,7 +598,8 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     confirm.add_argument("test", nargs="?", help="which test (see --list)")
-    confirm.add_argument("url", nargs="?", default=None, help="MCP server endpoint (real-target mode)")
+    confirm.add_argument("url", nargs="?", default=None, help="server URL for real-target mode: the MCP endpoint, or for "
+                              "agent-memory the agent server's base URL (e.g. http://127.0.0.1:2024)")
     confirm.add_argument("--demo", action="store_true", help="run against bundled loopback fixtures")
     confirm.add_argument("--list", action="store_true", help="list the deep tests")
     confirm.add_argument("--token-a", dest="token_a", default=None, help="bearer token for identity A")
@@ -594,6 +607,24 @@ def build_parser() -> argparse.ArgumentParser:
     confirm.add_argument("--allow-nonloopback", dest="allow_nonloopback", action="store_true",
                          help="permit a non-loopback target (authorized testing only)")
     confirm.add_argument("--json", action="store_true", help="JSON output")
+    memory = confirm.add_argument_group(
+        "agent-memory options",
+        "For `confirm agent-memory <base-url>`. All optional: two tokens alone test the "
+        "thread and Store paths. --assistant, --save-input and --recall-input together add "
+        "the through-the-agent paths. See docs/AGENT-MEMORY.md.")
+    memory.add_argument("--namespace-a", dest="namespace_a", default=None,
+                        help="a Store namespace identity A may write to, dotted (e.g. alice.notes)")
+    memory.add_argument("--namespace-b", dest="namespace_b", default=None,
+                        help="identity B's own Store namespace, dotted; when B's id is a string "
+                             "prefix of A's (ali / alice) this also checks namespace boundaries")
+    memory.add_argument("--assistant", dest="assistant_id", default=None,
+                        help="assistant (graph) id to run")
+    memory.add_argument("--save-input", dest="save_input", default=None,
+                        help="JSON run input that makes the agent save; {marker} is replaced")
+    memory.add_argument("--recall-input", dest="recall_input", default=None,
+                        help="JSON run input that makes the agent recall; must not contain {marker}")
+    memory.add_argument("--whoami-field", dest="whoami_field", default=None,
+                        help="field of the run output that carries the caller's identity, if any")
     confirm.set_defaults(func=cmd_confirm)
 
     return parser

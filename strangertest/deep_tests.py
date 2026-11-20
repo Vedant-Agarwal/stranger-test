@@ -242,6 +242,59 @@ def _demo_confused_deputy() -> Dict[str, Any]:
     return {"leaky": leaky, "safe": safe}
 
 
+# The bundled practice agent's run inputs ({marker} is filled in by the probe).
+_PRACTICE_AGENT = {
+    "assistant_id": "memory",
+    "save_input": {"action": "save", "key": "st-probe", "value": "{marker}"},
+    "recall_input": {"action": "recall", "key": "st-probe"},
+    "whoami_field": "whoami",
+}
+
+
+def _demo_agent_memory() -> Dict[str, Any]:
+    from .agent_memory import run_agent_memory_probe
+    from .practice_agent_memory_http import build_server
+
+    out = {}
+    for mode in ("leaky", "safe"):
+        with _serve(build_server(mode, port=_free_port())) as mcp_url:
+            base = mcp_url[: -len("/mcp")]      # this API lives at the server root
+            out[mode] = run_agent_memory_probe(
+                base, "tok-alice", "tok-bob", namespace_a=["alice", "notes"],
+                authorized=True, **_PRACTICE_AGENT)
+    # The namespace-boundary shape needs prefix-sibling ids: B is "ali", A is "alice".
+    with _serve(build_server("prefixbug", port=_free_port())) as mcp_url:
+        out["prefixbug"] = run_agent_memory_probe(
+            mcp_url[: -len("/mcp")], "tok-alice", "tok-ali",
+            namespace_a=["alice", "notes"], namespace_b=["ali"], authorized=True)
+    return out
+
+
+def _json_opt(value: Any, name: str) -> Any:
+    """A CLI option that carries JSON (a run input); None stays None."""
+    if value is None or isinstance(value, (dict, list)):
+        return value
+    import json
+    try:
+        return json.loads(value)
+    except ValueError as exc:
+        raise ValueError(f"--{name} is not valid JSON: {exc}")
+
+
+def _target_agent_memory(url: str, token_a: str, token_b: str, **opts) -> Any:
+    from .agent_memory import run_agent_memory_probe
+    def split(value):
+        return [p for p in value.split(".") if p] if isinstance(value, str) else value
+    return run_agent_memory_probe(
+        url, token_a, token_b, namespace_a=split(opts.get("namespace_a")),
+        namespace_b=split(opts.get("namespace_b")),
+        assistant_id=opts.get("assistant_id"),
+        save_input=_json_opt(opts.get("save_input"), "save-input"),
+        recall_input=_json_opt(opts.get("recall_input"), "recall-input"),
+        whoami_field=opts.get("whoami_field"),
+        authorized=True, authorization_note="operator-confirmed target")
+
+
 # --------------------------------------------------------------------------- #
 # The registry.                                                               #
 # --------------------------------------------------------------------------- #
@@ -289,6 +342,12 @@ DEEP_TESTS: Dict[str, DeepTest] = {
         run_target=None,
         target_note="Lab/target test needs a resource A can mutate; run with --demo for "
                     "the reference run."),
+    "agent-memory": DeepTest(
+        "agent-memory", "Agent memory isolation (threads and long-term Store)",
+        "Identity A saves a marker in an agent server's memory; can identity B read it "
+        "back from A's thread, from the Store, or by asking the agent? Speaks the "
+        "LangGraph Server API; give the server's base URL, not an MCP endpoint.",
+        tier1_check=None, demo=_demo_agent_memory, run_target=_target_agent_memory),
 }
 
 # Scanner Tier-1 check_id -> the Tier-2 test that confirms it.

@@ -13,6 +13,6 @@ from .probe import Identity, ProbeError, ProbePlan, ProbeReport, new_marker, run
 from .subscribe import SubscriptionReport, run_subscription_probe  # noqa: F401
 from .transports import HTTPTransport, StdioTransport  # noqa: F401
 
-__version__ = "0.2.0"
+__version__ = "0.3.0"
 # Build provenance tag (origin marker for this project's source). See NOTICE.
 __provenance__ = "ST-PROV-67369f28825d1231"

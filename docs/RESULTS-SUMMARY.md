@@ -44,8 +44,9 @@ Notes that change how a cell should be read:
 | `elicitation` | none recorded here yet |
 | `confused-deputy` | lab test; see the thin-deputy fixtures in the full results |
 | `subscriptions` | lab test; see the XID-13 gate in the full results |
+| `agent-memory` | **LangGraph SQLite store: `LEAK` on `langgraph-checkpoint-sqlite` 3.1.0, `OK` on 3.1.1** — the probe unmodified, through a correct per-user shim over the real store (`integration/langgraph/real_store_gate.py`). Reproduces CVE-2026-71433. |
 
-Each of the five catches its bundled leaky server and clears its safe one
+Each catches its bundled leaky server and clears its safe one
 (`stranger-test confirm <test> --demo`).
 
 ## Detection proof

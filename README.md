@@ -10,8 +10,10 @@ the answer* by driving the server as two real identities and watching whether
 the line between them held.
 
 ```bash
-# scan any MCP server you run, in ~30s, no clone, no dependencies:
-pipx run stranger-test scan http://localhost:4600/mcp
+# scan any MCP server you run, in ~30s — no third-party dependencies:
+pip install stranger-test
+stranger-test scan http://localhost:4600/mcp
+# (or, zero-install with pipx: pipx run stranger-test scan http://localhost:4600/mcp)
 ```
 
 Free, Apache-2.0, standard-library-only Python (3.9+).
@@ -80,7 +82,7 @@ stranger-test confirm state-handle --demo          # leaky -> LEAK, safe -> OK
 stranger-test confirm state-handle http://127.0.0.1:4600/mcp --token-a <A> --token-b <B>
 ```
 
-The five dynamic cross-user tests (two identities, loopback, fingerprints only):
+The dynamic cross-user tests (two identities, loopback, fingerprints only):
 
 | Test | What it proves |
 |---|---|
@@ -89,6 +91,18 @@ The five dynamic cross-user tests (two identities, loopback, fingerprints only):
 | `tasks-idor`      | B reads / updates / cancels A's task by id, and whether task ids are enumerable (tasks extension, SEP-2663) |
 | `elicitation`     | A starts an elicitation, B completes the authorization — does the grant bind to A? (account takeover); plus secrets requested in form mode |
 | `subscriptions`   | B's `subscriptions/listen` stream receives notifications scoped to A |
+| `agent-memory`    | B reads what A saved in an agent server's memory — threads, long-term Store, or by asking the agent. Speaks the **LangGraph Server** API; give the server's base URL. With prefix-sibling ids it also catches the store namespace-boundary bugs (CVE-2026-71433 / -115883). |
+
+`agent-memory` needs only a running LangGraph server and two test users' tokens;
+nothing about your agent:
+
+```bash
+stranger-test confirm agent-memory http://127.0.0.1:2024 --token-a <A> --token-b <B>
+```
+
+Guide, with a copy-paste test-user auth snippet: [docs/AGENT-MEMORY.md](docs/AGENT-MEMORY.md).
+Background and results on affected and fixed store versions:
+[docs/LANGGRAPH-MEMORY-ISOLATION.md](docs/LANGGRAPH-MEMORY-ISOLATION.md).
 
 Every `confirm` grade requires **provably distinct principals** before it will
 call anything a LEAK — on a server that collapses both callers to one identity
@@ -101,8 +115,8 @@ it reports `OBSERVATION`, not a false positive.
 Python 3.9+. Standard library only — **no third-party dependencies.**
 
 ```bash
-pipx run stranger-test scan <url>     # zero-install, one-off
-pip install stranger-test             # or install the CLI + library
+pip install stranger-test             # the CLI + library
+pipx run stranger-test scan <url>     # or zero-install, one-off (needs pipx)
 ```
 
 ## Try it (no target needed)
@@ -208,18 +222,24 @@ permitted the test. There is deliberately no "scan everything" mode: one target,
 one authorization. Any real finding is for **private, responsible disclosure**
 to the server's owner. Do not name-and-shame.
 
-## What's new in 0.2.0
+## What's new in 0.3.0
 
-- **`scan`** — the one-command, read-only fingerprint scanner (Tier 1): SARIF /
-  JSON output, CI-ready exit codes, loopback-safe by default.
-- **`confirm`** — the two-identity confirmation lab (Tier 2) with five dynamic
-  cross-user tests (`state-handle`, `confused-deputy`, `tasks-idor`,
-  `elicitation`, `subscriptions`), each with a bundled leaky+safe `--demo`.
-- **Precision:** `confirm` requires provably distinct principals before grading
-  a `LEAK`; an identity-collapsing server yields `OBSERVATION`, not a false
-  positive.
-- **One exit-code scheme** across every command: `0` OK, `1` LEAK or FAIL,
-  `2` INCONCLUSIVE, `3` usage error or authorization refusal.
+- **`confirm agent-memory`** — a sixth deep test, for **agent servers** rather
+  than MCP servers: can identity B read what A saved in the agent's memory
+  (LangGraph threads, long-term Store, or via the agent)? Bundled `--demo`, and
+  a real-LangGraph gate in `integration/langgraph/`. Two tokens are enough to
+  run it on your own app: see [docs/AGENT-MEMORY.md](docs/AGENT-MEMORY.md).
+- **Store namespace-boundary catch.** With two prefix-sibling identities
+  (`--namespace-b`), `agent-memory` catches the LangGraph store bugs fixed in
+  2026 (CVE-2026-71433, CVE-2026-115883): it grades `LEAK` against the real
+  `langgraph-checkpoint-sqlite` 3.1.0 and `OK` against 3.1.1.
+
+### 0.2.0
+
+- **`scan`** (Tier 1) one-command read-only scanner, SARIF/JSON, CI exit codes.
+- **`confirm`** (Tier 2) five dynamic cross-user tests, each with a `--demo`.
+- **Precision:** a `LEAK` needs provably distinct principals, else `OBSERVATION`.
+- **One exit-code scheme:** `0` OK, `1` LEAK/FAIL, `2` INCONCLUSIVE, `3` usage.
 
 Unit tests, from a clone of the repository root:
 

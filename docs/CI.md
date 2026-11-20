@@ -8,7 +8,7 @@ on the runner's loopback, with test accounts. Nothing leaves the runner.
 Start your MCP server in the job, then:
 
 ```yaml
-- uses: Vedant-Agarwal/stranger-test@v0.2
+- uses: strangertest-labs/stranger-test@v0.3
   with:
     url: http://127.0.0.1:8080/mcp
 ```
@@ -19,7 +19,7 @@ cannot be reached (nothing was scanned, so it is not a pass).
 To see the signals in the repository's code-scanning tab:
 
 ```yaml
-- uses: Vedant-Agarwal/stranger-test@v0.2
+- uses: strangertest-labs/stranger-test@v0.3
   with:
     url: http://127.0.0.1:8080/mcp
     sarif-file: stranger-test.sarif
@@ -35,7 +35,7 @@ This is the cross-user check. It needs two test accounts on the server under
 test, each with its own bearer token:
 
 ```yaml
-- uses: Vedant-Agarwal/stranger-test@v0.2
+- uses: strangertest-labs/stranger-test@v0.3
   with:
     mode: confirm
     test: state-handle        # or tasks-idor, elicitation
